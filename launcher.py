@@ -1,13 +1,22 @@
-from typing import Tuple
+from typing import Tuple, Dict
 
-import proto.runtime_pb2 as runtime
-import proto.configuration_pb2 as configuration
-import proto.protocol_pb2 as protocol
-import proto.helpers_pb2 as helpers
+from .proto import runtime_pb2 as runtime
+from .proto import configuration_pb2 as configuration
+from .proto import protocol_pb2 as protocol
+from .proto import helpers_pb2 as helpers
 import google.protobuf.internal.well_known_types as well_known_types
 from google.protobuf.message import Message
 
 from pysodium import crypto_sign_keypair, crypto_sign_detached
+import requests
+import json
+import codecs
+
+
+CONFIGURATION_SERVICE_ID = 1
+DEPLOY_INIT_METHOD_ID = 5
+RUST_RUNTIME_ID = 0
+ACTIVATION_HEIGHT_IMMEDIATELY = 0
 
 
 class DeployMessages:
@@ -61,13 +70,43 @@ def sign(data: bytes, sk: bytes) -> bytes:
     return crypto_sign_detached(data, sk)
 
 
-def main() -> None:
+def encode(bytes):
+    return codecs.encode(bytes, "hex").decode("utf-8")
+
+
+class ExonumClient(object):
+    def __init__(
+        self, hostname: str, public_api_port=80, private_api_port=81, ssl=False
+    ) -> ExonumClient:
+        self.schema = "https" if ssl else "http"
+        self.hostname = hostname
+        self.public_api_port = public_api_port
+        self.private_api_port = private_api_port
+        self.service_name = service_name
+        self.tx_url = TX_URL.format(self.schema, hostname, public_api_port)
+
+    def send_raw_tx(self, tx: bytes) -> Dict[str, str]:
+        try:
+            response = requests.post(
+                self.tx_url,
+                data=tx.to_json(),
+                headers={"content-type": "application/json"},
+            )
+            return response
+        except Exception as e:
+            return {"error": str(e)}
+
+    def _msg_to_json(self, tx) -> str:
+        return json.dumps({"tx_body": encode(tx)}, indent=4)
+
+
+def main(args) -> None:
     pk, sk = gen_keypair()
 
-    call_info = DeployMessages.call_info(0, 0)
+    call_info = DeployMessages.call_info(CONFIGURATION_SERVICE_ID, DEPLOY_INIT_METHOD_ID)
 
     artifact_spec = DeployMessages.rust_artifact_spec("cryptocurrency", "0.0.1")
-    deploy_tx = DeployMessages.deploy_tx(0, 0, artifact_spec)
+    deploy_tx = DeployMessages.deploy_tx(RUST_RUNTIME_ID, ACTIVATION_HEIGHT_IMMEDIATELY, artifact_spec)
 
     tx = DeployMessages.any_tx(call_info, deploy_tx)
 
