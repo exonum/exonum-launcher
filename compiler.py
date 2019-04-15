@@ -1,3 +1,5 @@
+from typing import Optional
+
 import os
 import shutil
 import subprocess
@@ -12,7 +14,7 @@ PROTOCOL_PROTO = "protocol.proto"
 BLOCKCHAIN_PROTO = "blockchain.proto"
 
 
-def find_protoc() -> str:
+def find_protoc() -> Optional[str]:
     if PROTOC_ENV_NAME in os.environ:
         return os.getenv(PROTOC_ENV_NAME)
     else:

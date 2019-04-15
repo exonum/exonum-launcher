@@ -23,6 +23,13 @@ def run() -> None:
     parser_compile.set_defaults(func=compiler_main)
 
     parser_run = sub_parser.add_parser("run", help="Runs the service launcher")
+    parser_run.add_argument(
+        "-i",
+        "--input",
+        type=str,
+        help="A path to json input for service initialization",
+        required=True,
+    )
     parser_run.set_defaults(func=launcher_main)
 
     args = parser.parse_args()
