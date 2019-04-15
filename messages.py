@@ -1,3 +1,5 @@
+from typing import Dict, Any
+
 from .proto import runtime_pb2 as runtime
 from .proto import configuration_pb2 as configuration
 from .proto import protocol_pb2 as protocol
@@ -6,6 +8,11 @@ import google.protobuf.internal.well_known_types as well_known_types
 from google.protobuf.message import Message
 
 from .utils import sign
+
+CONFIGURATION_SERVICE_ID = 1
+DEPLOY_INIT_METHOD_ID = 5
+RUST_RUNTIME_ID = 0
+ACTIVATION_HEIGHT_IMMEDIATELY = 0
 
 
 class DeployMessages:
@@ -54,3 +61,19 @@ class DeployMessages:
         signed_message.sign.CopyFrom(helpers.Signature(data=signature))
 
         return signed_message
+
+
+def get_signed_tx(pk: bytes, sk: bytes, artifact: Dict[Any, Any]) -> protocol.SignedMessage:
+    artifact_name = artifact["artifact_spec"]["name"]
+    artifact_version = artifact["artifact_spec"]["version"]
+
+    call_info = DeployMessages.call_info(CONFIGURATION_SERVICE_ID, DEPLOY_INIT_METHOD_ID)
+
+    artifact_spec = DeployMessages.rust_artifact_spec(artifact_name, artifact_version)
+    deploy_tx = DeployMessages.deploy_tx(RUST_RUNTIME_ID, ACTIVATION_HEIGHT_IMMEDIATELY, artifact_spec)
+
+    tx = DeployMessages.any_tx(call_info, deploy_tx)
+
+    signed_tx = DeployMessages.signed_message(tx, pk, sk)
+
+    return signed_tx

@@ -2,7 +2,6 @@ from typing import Dict
 
 import requests
 import json
-import codecs
 
 from .utils import encode
 
