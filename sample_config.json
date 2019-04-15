@@ -2,7 +2,7 @@
     "exonum": {
         "hostname": "127.0.0.1",
         "public_api_port": 80,
-        "ssl": false,
+        "ssl": false
     },
     "transactions": [
         {
