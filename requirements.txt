@@ -1,0 +1,2 @@
+protobuf==3.7.1
+pysodium==0.7.1
