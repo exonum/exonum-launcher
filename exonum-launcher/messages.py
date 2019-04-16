@@ -54,6 +54,34 @@ class DeployMessages:
         return deploy_tx
 
     @staticmethod
+    def init_tx(runtime_id: int,
+                artifact_spec: Message,
+                instance_name: str,
+                constuctor_data: Message) -> configuration.InitTx:
+        init_tx = configuration.InitTx()
+        init_tx.runtime_id = runtime_id
+        init_tx.artifact_spec.Pack(artifact_spec)
+        init_tx.instance_name = instance_name
+        init_tx.constuctor_data.Pack(constuctor_data)
+
+        return init_tx
+
+    @staticmethod
+    def deploy_init_tx(runtime_id: int,
+                       activation_height: int,
+                       artifact_spec: Message,
+                       instance_name: str,
+                       constuctor_data: Message) -> configuration.DeployInitTx:
+        deploy_tx = DeployMessages.deploy_tx(runtime_id, activation_height, artifact_spec)
+        init_tx = DeployMessages.init_tx(runtime_id, artifact_spec, instance_name, constuctor_data)
+
+        deploy_init_tx = configuration.DeployInitTx()
+        deploy_init_tx.deploy_tx.CopyFrom(deploy_tx)
+        deploy_init_tx.init_tx.CopyFrom(init_tx)
+
+        return deploy_init_tx
+
+    @staticmethod
     def any_tx(call_info: protocol.CallInfo, payload: Message) -> protocol.AnyTx:
         tx = protocol.AnyTx()
         tx.dispatch.CopyFrom(call_info)
