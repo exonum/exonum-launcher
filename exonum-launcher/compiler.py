@@ -69,7 +69,7 @@ def main(args) -> None:
 
     # service_proto_file_names = " ".join(map(lambda dir: find_proto_files(dir), args.service_paths))
 
-    output_dir = "launcher/proto"
+    output_dir = os.path.join(args.output, 'proto')
     protoc_args = [
         path_to_protoc,
         EXONUM_PROTO_PATH.format(args.exonum_sources),
