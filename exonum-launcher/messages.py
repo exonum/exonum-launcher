@@ -8,20 +8,16 @@ from google.protobuf.message import Message
 from .utils import sign
 
 # Dynamically load protobuf modules.
-proto_path = os.environ.get("EXONUM_LAUNCHER_PROTO_PATH")
-if proto_path:
-    try:
-        sys.path.append(proto_path)
+proto_path = os.environ.get("EXONUM_LAUNCHER_PROTO_PATH", "")
+try:
+    sys.path.append(proto_path)
 
-        from proto import runtime_pb2 as runtime
-        from proto import configuration_pb2 as configuration
-        from proto import protocol_pb2 as protocol
-        from proto import helpers_pb2 as helpers
-    except (ModuleNotFoundError, ImportError):
-        print("Incorrect directory for proto files provided")
-        exit(1)
-else:
-    print("No EXONUM_LAUNCHER_PROTO_PATH was provided")
+    from proto import runtime_pb2 as runtime
+    from proto import configuration_pb2 as configuration
+    from proto import protocol_pb2 as protocol
+    from proto import helpers_pb2 as helpers
+except (ModuleNotFoundError, ImportError):
+    print("Incorrect directory for proto files was provided")
     exit(1)
 
 
