@@ -67,7 +67,8 @@ def main(args) -> None:
         print("Protobuf compiler not found")
         exit(1)
 
-    # Exonum main protoc files.
+    # service_proto_file_names = " ".join(map(lambda dir: find_proto_files(dir), args.service_paths))
+
     output_dir = "launcher/proto"
     protoc_args = [
         path_to_protoc,

@@ -20,6 +20,13 @@ def run() -> None:
         help="A path to exonum's sources",
         required=True,
     )
+    parser_compile.add_argument(
+        "-s",
+        "--service-paths",
+        type=str,
+        help="Space-separated paths to the directory with services proto files",
+        nargs='*',
+    )
     parser_compile.set_defaults(func=compiler_main)
 
     parser_run = sub_parser.add_parser("run", help="Runs the service launcher")
