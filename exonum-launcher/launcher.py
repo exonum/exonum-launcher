@@ -25,6 +25,6 @@ def main(args) -> None:
 
     for transaction in transactions:
         signed_tx = get_signed_tx(pk, sk, transaction)
-        # print(signed_tx)
 
-        client.send_raw_tx(signed_tx.SerializeToString())
+        response = client.send_raw_tx(signed_tx.SerializeToString())
+        print(response)

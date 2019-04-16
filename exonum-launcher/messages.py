@@ -93,6 +93,13 @@ class DeployMessages:
         return tx
 
     @staticmethod
+    def exonum_message_from_any_tx(any_tx: protocol.AnyTx) -> protocol.ExonumMessage:
+        exonum_msg = protocol.ExonumMessage()
+        exonum_msg.transaction.CopyFrom(any_tx)
+
+        return exonum_msg
+
+    @staticmethod
     def signed_message(msg: Message, pk: bytes, sk: bytes) -> protocol.SignedMessage:
         signed_message = protocol.SignedMessage()
 
@@ -137,12 +144,10 @@ def get_signed_tx(pk: bytes, sk: bytes, artifact: Dict[Any, Any]) -> protocol.Si
     deploy_init_tx = DeployMessages.deploy_init_tx(RUST_RUNTIME_ID, ACTIVATION_HEIGHT_IMMEDIATELY, artifact_spec,
                                                    instance_name, constructor_data)
 
-    # print(json_format.MessageToJson(deploy_init_tx))
-    # print("--------------------------")
-
     tx = DeployMessages.any_tx(call_info, deploy_init_tx)
 
-    signed_tx = DeployMessages.signed_message(tx, pk, sk)
+    exonum_msg = DeployMessages.exonum_message_from_any_tx(tx)
 
-    # return json_format.MessageToJson(signed_tx)
+    signed_tx = DeployMessages.signed_message(exonum_msg, pk, sk)
+
     return signed_tx
