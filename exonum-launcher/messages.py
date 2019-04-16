@@ -137,12 +137,12 @@ def get_signed_tx(pk: bytes, sk: bytes, artifact: Dict[Any, Any]) -> protocol.Si
     deploy_init_tx = DeployMessages.deploy_init_tx(RUST_RUNTIME_ID, ACTIVATION_HEIGHT_IMMEDIATELY, artifact_spec,
                                                    instance_name, constructor_data)
 
-    print(json_format.MessageToJson(deploy_init_tx))
-    print("--------------------------")
+    # print(json_format.MessageToJson(deploy_init_tx))
+    # print("--------------------------")
 
     tx = DeployMessages.any_tx(call_info, deploy_init_tx)
 
     signed_tx = DeployMessages.signed_message(tx, pk, sk)
 
-    # return signed_tx
-    return json_format.MessageToJson(signed_tx)
+    # return json_format.MessageToJson(signed_tx)
+    return signed_tx
