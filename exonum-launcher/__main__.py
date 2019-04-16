@@ -22,9 +22,9 @@ def run() -> None:
     )
     parser_compile.add_argument(
         "-s",
-        "--service-paths",
+        "--services",
         type=str,
-        help="Space-separated paths to the directory with services proto files",
+        help="Space-separated sequence of service_name:path_to_service pairs",
         nargs='*',
     )
     parser_compile.add_argument(

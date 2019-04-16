@@ -51,7 +51,7 @@ def run_protoc(protoc_args, output_dir: str) -> None:
     )
     code = protoc_process.wait()
     if code == 0:
-        print("Proto files were compiled successfully")
+        print("Proto files for {} were compiled successfully".format(output_dir))
     else:
         out, err = protoc_process.communicate()
         print("Error acquired while compiling files: {}".format(err.decode("utf-8")))
@@ -80,5 +80,17 @@ def main(args) -> None:
         BLOCKCHAIN_PROTO,
         "--python_out={}".format(output_dir),
     ]
-
     run_protoc(protoc_args, output_dir)
+
+    for service_info in args.service_paths:
+        service_name, service_path = service_info.split(':')
+        output_dir = os.path.join(args.output, service_name)
+        protoc_args = [
+            path_to_protoc,
+            EXONUM_PROTO_PATH.format(args.exonum_sources),
+            SERVICE_PROTO_PATH.format(service_path),
+            HELPERS_PROTO,
+            find_proto_files(service_path),
+            "--python_out={}".format(output_dir),
+        ]
+        run_protoc(protoc_args, output_dir)

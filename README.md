@@ -29,16 +29,16 @@ Usage of the `compile` subcommand:
 
 ```sh
 usage: exonum-service-launcher compile [-h] -e EXONUM_SOURCES
-                                       [-s [SERVICE_PATHS [SERVICE_PATHS ...]]]
-                                       -o OUTPUT
+                                       [-s [SERVICES [SERVICES ...]]] -o
+                                       OUTPUT
 
 optional arguments:
   -h, --help            show this help message and exit
   -e EXONUM_SOURCES, --exonum-sources EXONUM_SOURCES
                         A path to exonums sources
-  -s [SERVICE_PATHS [SERVICE_PATHS ...]], --service-paths [SERVICE_PATHS [SERVICE_PATHS ...]]
-                        Space-separated paths to the directory with services
-                        proto files
+  -s [SERVICES [SERVICES ...]], --services [SERVICES [SERVICES ...]]
+                        Space-separated sequence of
+                        service_name:path_to_service pairs
   -o OUTPUT, --output OUTPUT
                         A path to the directory where compiled files should be
                         saved
@@ -92,6 +92,10 @@ cd launcher
 source bin/activate
 git clone git@github.com:popzxc/exonum-launcher.git
 python3 -m pip install exonum-launcher
+
+python -m exonum-launcher compile -e exonum -s cryptocurrency:exonum/examples/cryptocurrency-advanced/backend/src/proto -o proto
+
+python -m exonum-launcher run -i input.json -p proto
 ```
 
 ## License
