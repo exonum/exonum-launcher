@@ -1,8 +1,11 @@
+from typing import Dict, Any
 import sys
 import os
+import importlib
+import json
 
-from typing import Dict, Any
 import google.protobuf.internal.well_known_types as well_known_types
+import google.protobuf.json_format as json_format
 from google.protobuf.message import Message
 
 from .utils import sign
@@ -57,12 +60,12 @@ class DeployMessages:
     def init_tx(runtime_id: int,
                 artifact_spec: Message,
                 instance_name: str,
-                constuctor_data: Message) -> configuration.InitTx:
+                constructor_data: Message) -> configuration.InitTx:
         init_tx = configuration.InitTx()
         init_tx.runtime_id = runtime_id
         init_tx.artifact_spec.Pack(artifact_spec)
         init_tx.instance_name = instance_name
-        init_tx.constuctor_data.Pack(constuctor_data)
+        init_tx.constructor_data.Pack(constructor_data)
 
         return init_tx
 
@@ -102,18 +105,44 @@ class DeployMessages:
 
         return signed_message
 
+    @staticmethod
+    def constuctor_data(service_name: str, json_data: str) -> Message:
+        ConstructorData = get_service_init_structure(service_name)
+
+        data = ConstructorData()
+
+        return json_format.Parse(json_data, data)
+
+
+def get_service_init_structure(service_name: str) -> type:
+    # Warning: this function assumes that for
+    # artifact named `example` ConstructorData lies in `example/example_pb2.py`
+    service = importlib.import_module('{}.{}_pb2'.format(service_name, service_name))
+
+    return service.__dict__['ConstructorData']
+
 
 def get_signed_tx(pk: bytes, sk: bytes, artifact: Dict[Any, Any]) -> protocol.SignedMessage:
     artifact_name = artifact["artifact_spec"]["name"]
     artifact_version = artifact["artifact_spec"]["version"]
+    constructor_data_json = json.dumps(artifact["constructor_data"])
+    instance_name = artifact["instance_name"]
 
     call_info = DeployMessages.call_info(CONFIGURATION_SERVICE_ID, DEPLOY_INIT_METHOD_ID)
 
     artifact_spec = DeployMessages.rust_artifact_spec(artifact_name, artifact_version)
-    deploy_tx = DeployMessages.deploy_tx(RUST_RUNTIME_ID, ACTIVATION_HEIGHT_IMMEDIATELY, artifact_spec)
 
-    tx = DeployMessages.any_tx(call_info, deploy_tx)
+    constructor_data = DeployMessages.constuctor_data(artifact_name, constructor_data_json)
+
+    deploy_init_tx = DeployMessages.deploy_init_tx(RUST_RUNTIME_ID, ACTIVATION_HEIGHT_IMMEDIATELY, artifact_spec,
+                                                   instance_name, constructor_data)
+
+    print(json_format.MessageToJson(deploy_init_tx))
+    print("--------------------------")
+
+    tx = DeployMessages.any_tx(call_info, deploy_init_tx)
 
     signed_tx = DeployMessages.signed_message(tx, pk, sk)
 
-    return signed_tx
+    # return signed_tx
+    return json_format.MessageToJson(signed_tx)

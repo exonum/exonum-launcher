@@ -73,7 +73,7 @@ Example of expected `json` file:
                 "version": "0.0.1"
             },
             "instance_name": "XNM token",
-            "init_data": {
+            "constructor_data": {
                 "field_a": "value_a",
                 "field_b": "value_b"
             }
@@ -81,6 +81,18 @@ Example of expected `json` file:
     ]
 }
 ```
+
+## Warning
+
+As for now, `run` subcommand assumes that service name from `compile` command is equal to the name of the `.proto` file and is equal to the artifact name from the transaction.
+
+For example:
+
+You want to send transaction to initialize `cryptocurrency` artifact. Then make sure that `.proto` file for that service is called `cryptocurrency.proto` and in the `compile` command you write `-s cryptocurrency:some/path`.
+
+Also this `.proto` file should contain `ConstructorData` message.
+
+Otherwise you'll get an error.
 
 ## Install
 

@@ -82,7 +82,7 @@ def main(args) -> None:
     ]
     run_protoc(protoc_args, output_dir)
 
-    for service_info in args.service_paths:
+    for service_info in args.services:
         service_name, service_path = service_info.split(':')
         output_dir = os.path.join(args.output, service_name)
         protoc_args = [

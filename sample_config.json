@@ -11,9 +11,8 @@
                 "version": "0.0.1"
             },
             "instance_name": "XNM token",
-            "init_data": {
-                "field_a": "value_a",
-                "field_b": "value_b"
+            "constructor_data": {
+                "some_number": 45
             }
         }
     ]
