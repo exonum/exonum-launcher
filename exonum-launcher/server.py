@@ -38,7 +38,11 @@ def hello() -> str:
 @app.route("/send", methods=['POST'])
 def send() -> str:
     if not exonum_client:
-        return "Exonum client wasn't configured. Consider running through `python -m exonum-launcher`"
+        result = {
+            "type": "Failure",
+            "message": "Exonum client wasn't configured. Consider running through `python -m exonum-launcher`"
+        }
+        return render_template("result.html", result=result)
 
     artifact_name = request.form['artifact_name']
     artifact_version = request.form['artifact_version']
@@ -64,11 +68,20 @@ def send() -> str:
     response = exonum_client.send_raw_tx(signed_tx.SerializeToString())
 
     if response.get('error'):
-        result = "Request errored. Check if exonum instance running and config is correct. Error: {}"
+        message = "Request errored. Check if exonum instance running and config is correct. Error: {}"
 
-        return result.format(response['error'])
+        result = {
+            "type": "Failure",
+            "message": message.format(result['error']),
+        }
 
-    return "Success. Exonum response: {}".format(response)
+        return render_template("result.html", result=result)
+
+    result = {
+        "type": "Success",
+        "message": "Success. Exonum response: {}".format(response)
+    }
+    return render_template("result.html", result=result)
 
 
 def main(args) -> None:
