@@ -3,26 +3,76 @@
 <head>
 <meta charset="utf-8" />
 <title>Exonum Service Launcher</title>
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
 <!-- <link rel="stylesheet" href="style.css" /> -->
 
 </head>
-<body>
-    {% for item in messages %}
-        <form action="/send" method="POST">
-            {{ item.name }}: <br>
-            <fieldset>
-            Artifact name: <input type="text" name="artifact_name"> <br>
-            Artifact version: <input type="text" name="artifact_version"> <br>
-            Instance name: <input type="text" name="instance_name"> <br>
+<body class="bg-light">
+    <header>
+      <div class="navbar navbar-dark bg-dark box-shadow">
+        <div class="container d-flex justify-content-between">
+          <a href="#" class="navbar-brand d-flex align-items-center">
+            <strong>Exonum service launcher</strong>
+          </a>
+        </div>
+      </div>
+    </header>
 
-            <fieldset>
-                Init data: <br>
-                {% for field in item.fields %}
-                    {{ field }}: <input type="text" name="init_{{ field }}"> <br>
+    <main role="main">
+
+        <div class="container">
+            <div class="row">
+                <div class="col">
+                {% for item in messages %}
+                    <div class="card" style="margin: 10px">
+                        <div class="card-header"> <h4> {{ item.name }}: </h4> </div> 
+                        <div class="card-body">
+                            <form action="/send" method="POST">
+                                <div class="form-group row">
+                                    <label for="artifact_name" class="col-sm-4 col-form-label">Artifact name:</label> 
+                                    <div class="col-sm-8">
+                                        <input type="text" class="form-control" name="artifact_name">
+                                    </div>
+                                </div>
+
+                                <div class="form-group row">
+                                    <label for="artifact_version" class="col-sm-4 col-form-label">Artifact version:</label> 
+                                    <div class="col-sm-8">
+                                        <input type="text" class="form-control" name="artifact_version">
+                                    </div>
+                                </div>
+
+                                <div class="form-group row">
+                                    <label for="instance_name" class="col-sm-4 col-form-label">Instance name:</label> 
+                                    <div class="col-sm-8">
+                                        <input type="text" class="form-control" name="instance_name">
+                                    </div>
+                                </div>
+
+                                <div class="form-group row">
+                                    <div class="col">
+                                        <strong>Constructor data:</strong>
+                                    </div>
+                                </div>
+
+                                {% for field in item.fields %}
+                                    <div class="form-group row">
+                                        <label for="init_{{ field }}" class="col-sm-4 col-form-label">{{ field }}:</label> 
+                                        <div class="col-sm-8">
+                                            <input type="text" class="form-control" name="init_{{ field }}"> <br>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                                <input class="btn btn-primary btn-lg btn-block" type="submit" value="Submit">
+                            </form>
+                        </div>
+                    </div>
                 {% endfor %}
-            </fieldset>
-            <input type="submit" value="Submit">
-            </fieldset>
-    {% endfor %}
+                </div>
+                <div class="col"></div>
+            </div>
+        </div>
+
+    </main>
 </body>
 </html>
