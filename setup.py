@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from distutils.core import setup
 
-install_requires = ["protobuf", "pysodium", "requests >= 1.24.2"]
+install_requires = ["protobuf", "pysodium", "requests", "urllib3>=1.24.2", "Flask"]
 
 python_requires = ">=3.6"
 
