@@ -4,11 +4,13 @@ A tool to send deploy&init transactions into the Exonum blockchain.
 
 ## Capabilities
 
-Tool has 2 subcommands: `compile` and `run`.
+Tool has 3 subcommands: `compile`, `run` and `server`.
 
 The first one compiles `*.proto` files into python.
 
 The second one sends transactions into the blockchain.
+
+The third one launches a site on https://127.0.0.1:5000 with a web interface for deploy&init transaction sender.
 
 
 ```sh
@@ -81,6 +83,8 @@ Example of expected `json` file:
     ]
 }
 ```
+
+Usage of the `server` subcommand is equivalent to `run` command. However, if any transactions are listed in the "transactions" section, they won't be sent.
 
 ## Warning
 
