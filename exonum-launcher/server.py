@@ -21,13 +21,13 @@ def hello() -> str:
     res = ""
     messages = []
 
-    for cd in constructor_data_classes:
+    for module in constructor_data_classes:
         message = {}
-        message["name"] = cd.__name__
+        message["name"] = module
         message["fields"] = []
-        cd_obj = cd()
+        pb_object = constructor_data_classes[module]()
 
-        for field in cd_obj.DESCRIPTOR.fields:
+        for field in pb_object.DESCRIPTOR.fields:
             message["fields"].append(field.name)
 
         messages.append(message)

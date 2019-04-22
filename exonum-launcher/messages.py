@@ -153,14 +153,14 @@ def get_signed_tx(pk: bytes, sk: bytes, artifact: Dict[Any, Any]) -> protocol.Si
     return signed_tx
 
 
-def get_constructor_data_classes() -> List[type]:
+def get_constructor_data_classes() -> Dict[str, type]:
     modules_dir = os.listdir(proto_path)
-    constructor_data_classes = []
+    constructor_data_classes = {}
 
     for module in modules_dir:
         if module != "proto":
             service = importlib.import_module('{}.{}_pb2'.format(module, module))
 
-            constructor_data_classes.append(service.__dict__['ConstructorData'])
+            constructor_data_classes[module] = service.__dict__['ConstructorData']
 
     return constructor_data_classes
