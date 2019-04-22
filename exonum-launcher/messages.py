@@ -122,8 +122,8 @@ class DeployMessages:
 
 
 def get_service_init_structure(service_name: str) -> type:
-    # Warning: this function assumes that for
-    # artifact named `example` ConstructorData lies in `example/example_pb2.py`
+    # Warning: this function assumes that ConstructorData for
+    # artifact named `example` lies in `example/example_pb2.py`
     service = importlib.import_module('{}.{}_pb2'.format(service_name, service_name))
 
     return service.__dict__['ConstructorData']

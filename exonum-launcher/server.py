@@ -62,20 +62,19 @@ def send() -> str:
 
     response = exonum_client.send_raw_tx(signed_tx.SerializeToString())
 
-    if response.get('error'):
-        message = "Request errored. Check if exonum instance running and config is correct. Error: {}"
+    result = {}
+    if not response.get('error'):
+        result = {
+            "type": "Success",
+            "message": "Success. Exonum response: {}".format(response)
+        }
+    else:
+        message = "Request errored. Check if exonum running and config is correct. Error: {}"
 
         result = {
             "type": "Failure",
             "message": message.format(result['error']),
         }
-
-        return render_template("result.html", result=result)
-
-    result = {
-        "type": "Success",
-        "message": "Success. Exonum response: {}".format(response)
-    }
     return render_template("result.html", result=result)
 
 
