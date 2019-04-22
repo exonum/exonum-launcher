@@ -85,9 +85,10 @@ def send() -> str:
 
 
 def main(args) -> None:
+    global exonum_client
     data = load_config(args.input)
     transactions = data["transactions"]
     exonum_cfg = data["exonum"]
-    client = ExonumClient(exonum_cfg["hostname"], exonum_cfg["public_api_port"], exonum_cfg["ssl"])
+    exonum_client = ExonumClient(exonum_cfg["hostname"], exonum_cfg["public_api_port"], exonum_cfg["ssl"])
 
     app.run()
