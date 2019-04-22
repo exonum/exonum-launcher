@@ -1,24 +1,19 @@
 from typing import Optional
 
 from flask import Flask, render_template, request
-import os
 from .messages import get_constructor_data_classes, get_signed_tx
 from .utils import load_config, gen_keypair
 from .client import ExonumClient
 
-file_folder = os.path.dirname(os.path.abspath(__file__))
-template_folder = os.path.join(file_folder, "/templates")
 app = Flask(__name__)
 
 constructor_data_classes = get_constructor_data_classes()
-
 exonum_client: Optional[ExonumClient] = None
 pk, sk = gen_keypair()
 
 
 @app.route("/")
 def hello() -> str:
-    res = ""
     messages = []
 
     for module in constructor_data_classes:
