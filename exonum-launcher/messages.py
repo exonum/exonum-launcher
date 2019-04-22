@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, List
 import sys
 import os
 import importlib
@@ -151,3 +151,16 @@ def get_signed_tx(pk: bytes, sk: bytes, artifact: Dict[Any, Any]) -> protocol.Si
     signed_tx = DeployMessages.signed_message(exonum_msg, pk, sk)
 
     return signed_tx
+
+
+def get_constructor_data_classes() -> List[type]:
+    modules_dir = os.listdir(proto_path)
+    constructor_data_classes = []
+
+    for module in modules_dir:
+        if module != "proto":
+            service = importlib.import_module('{}.{}_pb2'.format(module, module))
+
+            constructor_data_classes.append(service.__dict__['ConstructorData'])
+
+    return constructor_data_classes

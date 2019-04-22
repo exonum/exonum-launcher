@@ -53,6 +53,23 @@ def run() -> None:
     )
     parser_run.set_defaults(func=prepare_launcher)
 
+    parser_run = sub_parser.add_parser("server", help="Runs the web UI for service launcher")
+    parser_run.add_argument(
+        "-i",
+        "--input",
+        type=str,
+        help="A path to json input for service initialization",
+        required=True,
+    )
+    parser_run.add_argument(
+        "-p",
+        "--proto",
+        type=str,
+        help="A path to the directory with generated proto files",
+        required=True,
+    )
+    parser_run.set_defaults(func=prepare_server)
+
     args = parser.parse_args()
 
     args.func(args)
@@ -66,6 +83,16 @@ def prepare_launcher(args):
     from .launcher import main as launcher_main
 
     launcher_main(args)
+
+
+def prepare_server(args):
+    proto_path = args.proto
+
+    os.environ["EXONUM_LAUNCHER_PROTO_PATH"] = proto_path
+
+    from .server import main as server_main
+
+    server_main(args)
 
 
 if __name__ == "__main__":

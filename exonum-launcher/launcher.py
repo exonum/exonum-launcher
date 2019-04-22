@@ -1,15 +1,8 @@
 from typing import Dict, Any
 
-import json
-
-from .utils import gen_keypair
+from .utils import gen_keypair, load_config
 from .messages import DeployMessages, get_signed_tx
 from .client import ExonumClient
-
-
-def load_config(path: str) -> Dict[Any, Any]:
-    with open(path) as f:
-        return json.load(f)
 
 
 def main(args) -> None:

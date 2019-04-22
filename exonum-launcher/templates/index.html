@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Exonum Service Launcher</title>
+<!-- <link rel="stylesheet" href="style.css" /> -->
+
+</head>
+<body>
+    {% for item in messages %}
+        <form action="/send" method="POST">
+            {{ item.name }}: <br>
+            <fieldset>
+            Artifact name: <input type="text" name="artifact_name"> <br>
+            Artifact version: <input type="text" name="artifact_version"> <br>
+            Instance name: <input type="text" name="instance_name"> <br>
+
+            <fieldset>
+                Init data: <br>
+                {% for field in item.fields %}
+                    {{ field }}: <input type="text" name="init_{{ field }}"> <br>
+                {% endfor %}
+            </fieldset>
+            <input type="submit" value="Submit">
+            </fieldset>
+    {% endfor %}
+</body>
+</html>
