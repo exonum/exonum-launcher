@@ -1,5 +1,7 @@
 from typing import Dict, Any
 
+import time
+
 from .utils import gen_keypair, load_config
 from .messages import DeployMessages, get_signed_deploy_tx, get_signed_init_tx
 from .client import ExonumClient
@@ -28,3 +30,5 @@ def main(args) -> None:
 
         response = client.send_raw_tx(signed_tx.SerializeToString())
         print(response)
+
+        time.sleep(1)  # 1 second wait between blocks
