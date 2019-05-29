@@ -1,7 +1,7 @@
 {
     "exonum": {
         "hostname": "127.0.0.1",
-        "public_api_port": 80,
+        "public_api_port": 8000,
         "ssl": false
     },
     "transactions": [
@@ -16,7 +16,7 @@
             "type": "init",
             "artifact_spec": {
                 "name": "cryptocurrency",
-                "version": "0.0.1"
+                "version": "0.1.0"
             },
             "instance_name": "XNM token",
             "constructor_data": {
