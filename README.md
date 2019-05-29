@@ -59,25 +59,32 @@ optional arguments:
                         A path to the directory with generated proto files
 ```
 
-Example of expected `json` file:
+Example of expected `json` file (don't forget to set transaction type!):
 
 ```json
 {
     "exonum": {
         "hostname": "127.0.0.1",
-        "public_api_port": 80,
+        "public_api_port": 8000,
         "ssl": false
     },
     "transactions": [
         {
+            "type": "deploy",
             "artifact_spec": {
                 "name": "cryptocurrency",
                 "version": "0.0.1"
+            }
+        },
+        {
+            "type": "init",
+            "artifact_spec": {
+                "name": "cryptocurrency",
+                "version": "0.1.0"
             },
             "instance_name": "XNM token",
             "constructor_data": {
-                "field_a": "value_a",
-                "field_b": "value_b"
+                "some_number": 45
             }
         }
     ]
