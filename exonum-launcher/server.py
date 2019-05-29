@@ -1,7 +1,7 @@
 from typing import Optional
 
 from flask import Flask, render_template, request
-from .messages import get_constructor_data_classes, get_signed_tx
+from .messages import get_constructor_data_classes, get_signed_deploy_tx, get_signed_init_tx
 from .utils import load_config, gen_keypair
 from .client import ExonumClient
 
@@ -30,8 +30,48 @@ def hello() -> str:
     return render_template("index.html", messages=messages)
 
 
-@app.route("/send", methods=['POST'])
-def send() -> str:
+@app.route("/send_deploy", methods=['POST'])
+def send_deploy() -> str:
+    if not exonum_client:
+        result = {
+            "type": "Failure",
+            "message": "Exonum client wasn't configured. Consider running through `python -m exonum-launcher`"
+        }
+        return render_template("result.html", result=result)
+
+    artifact_name = request.form['artifact_name']
+    artifact_version = request.form['artifact_version']
+
+    transaction = {
+        'type': 'deploy',
+        'artifact_spec': {
+            'name': artifact_name,
+            'version': artifact_version
+        }
+    }
+
+    signed_tx = get_signed_deploy_tx(pk, sk, transaction)
+
+    response = exonum_client.send_raw_tx(signed_tx.SerializeToString())
+
+    result = {}
+    if not response.get('error'):
+        result = {
+            "type": "Success",
+            "message": "Success. Exonum response: {}".format(response)
+        }
+    else:
+        message = "Request errored. Check if exonum running and config is correct. Error: {}"
+
+        result = {
+            "type": "Failure",
+            "message": message.format(response['error']),
+        }
+    return render_template("result.html", result=result)
+
+
+@app.route("/send_init", methods=['POST'])
+def send_init() -> str:
     if not exonum_client:
         result = {
             "type": "Failure",
@@ -50,6 +90,7 @@ def send() -> str:
             constructor_data[field_name] = request.form[field]
 
     transaction = {
+        'type': 'init',
         'artifact_spec': {
             'name': artifact_name,
             'version': artifact_version
@@ -58,7 +99,7 @@ def send() -> str:
         'constructor_data': constructor_data,
     }
 
-    signed_tx = get_signed_tx(pk, sk, transaction)
+    signed_tx = get_signed_init_tx(pk, sk, transaction)
 
     response = exonum_client.send_raw_tx(signed_tx.SerializeToString())
 
@@ -73,7 +114,7 @@ def send() -> str:
 
         result = {
             "type": "Failure",
-            "message": message.format(result['error']),
+            "message": message.format(response['error']),
         }
     return render_template("result.html", result=result)
 
