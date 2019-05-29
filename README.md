@@ -73,7 +73,7 @@ Example of expected `json` file (don't forget to set transaction type!):
             "type": "deploy",
             "artifact_spec": {
                 "name": "cryptocurrency",
-                "version": "0.0.1"
+                "version": "0.1.0"
             }
         },
         {
