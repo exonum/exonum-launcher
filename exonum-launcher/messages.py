@@ -25,6 +25,8 @@ except (ModuleNotFoundError, ImportError):
 
 
 CONFIGURATION_SERVICE_ID = 0
+DEPLOY_METHOD_ID = 3
+INIT_METHOD_ID = 4
 DEPLOY_INIT_METHOD_ID = 5
 RUST_RUNTIME_ID = 0
 ACTIVATION_HEIGHT_IMMEDIATELY = 0
@@ -157,7 +159,7 @@ def get_signed_deploy_tx(pk: bytes, sk: bytes, artifact: Dict[Any, Any]) -> prot
     artifact_name = artifact["artifact_spec"]["name"]
     artifact_version = artifact["artifact_spec"]["version"]
 
-    call_info = DeployMessages.call_info(CONFIGURATION_SERVICE_ID, DEPLOY_INIT_METHOD_ID)
+    call_info = DeployMessages.call_info(CONFIGURATION_SERVICE_ID, DEPLOY_METHOD_ID)
 
     artifact_spec = DeployMessages.rust_artifact_spec(artifact_name, artifact_version)
 
@@ -178,7 +180,7 @@ def get_signed_init_tx(pk: bytes, sk: bytes, artifact: Dict[Any, Any]) -> protoc
     constructor_data_json = json.dumps(artifact["constructor_data"])
     instance_name = artifact["instance_name"]
 
-    call_info = DeployMessages.call_info(CONFIGURATION_SERVICE_ID, DEPLOY_INIT_METHOD_ID)
+    call_info = DeployMessages.call_info(CONFIGURATION_SERVICE_ID, INIT_METHOD_ID)
 
     artifact_spec = DeployMessages.rust_artifact_spec(artifact_name, artifact_version)
 
