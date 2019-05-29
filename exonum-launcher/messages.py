@@ -74,9 +74,9 @@ class DeployMessages:
                        activation_height: int,
                        artifact_spec: Message,
                        instance_name: str,
-                       constuctor_data: Message) -> configuration.DeployInitTx:
+                       constructor_data: Message) -> configuration.DeployInitTx:
         deploy_tx = DeployMessages.deploy_tx(runtime_id, activation_height, artifact_spec)
-        init_tx = DeployMessages.init_tx(runtime_id, artifact_spec, instance_name, constuctor_data)
+        init_tx = DeployMessages.init_tx(runtime_id, artifact_spec, instance_name, constructor_data)
 
         deploy_init_tx = configuration.DeployInitTx()
         deploy_init_tx.deploy_tx.CopyFrom(deploy_tx)
@@ -145,6 +145,48 @@ def get_signed_tx(pk: bytes, sk: bytes, artifact: Dict[Any, Any]) -> protocol.Si
                                                    instance_name, constructor_data)
 
     tx = DeployMessages.any_tx(call_info, deploy_init_tx)
+
+    exonum_msg = DeployMessages.exonum_message_from_any_tx(tx)
+
+    signed_tx = DeployMessages.signed_message(exonum_msg, pk, sk)
+
+    return signed_tx
+
+
+def get_signed_deploy_tx(pk: bytes, sk: bytes, artifact: Dict[Any, Any]) -> protocol.SignedMessage:
+    artifact_name = artifact["artifact_spec"]["name"]
+    artifact_version = artifact["artifact_spec"]["version"]
+
+    call_info = DeployMessages.call_info(CONFIGURATION_SERVICE_ID, DEPLOY_INIT_METHOD_ID)
+
+    artifact_spec = DeployMessages.rust_artifact_spec(artifact_name, artifact_version)
+
+    deploy_tx = DeployMessages.deploy_tx(RUST_RUNTIME_ID, ACTIVATION_HEIGHT_IMMEDIATELY, artifact_spec)
+
+    tx = DeployMessages.any_tx(call_info, deploy_tx)
+
+    exonum_msg = DeployMessages.exonum_message_from_any_tx(tx)
+
+    signed_tx = DeployMessages.signed_message(exonum_msg, pk, sk)
+
+    return signed_tx
+
+
+def get_signed_init_tx(pk: bytes, sk: bytes, artifact: Dict[Any, Any]) -> protocol.SignedMessage:
+    artifact_name = artifact["artifact_spec"]["name"]
+    artifact_version = artifact["artifact_spec"]["version"]
+    constructor_data_json = json.dumps(artifact["constructor_data"])
+    instance_name = artifact["instance_name"]
+
+    call_info = DeployMessages.call_info(CONFIGURATION_SERVICE_ID, DEPLOY_INIT_METHOD_ID)
+
+    artifact_spec = DeployMessages.rust_artifact_spec(artifact_name, artifact_version)
+
+    constructor_data = DeployMessages.constuctor_data(artifact_name, constructor_data_json)
+
+    init_tx = DeployMessages.init_tx(RUST_RUNTIME_ID, artifact_spec, instance_name, constructor_data)
+
+    tx = DeployMessages.any_tx(call_info, init_tx)
 
     exonum_msg = DeployMessages.exonum_message_from_any_tx(tx)
 

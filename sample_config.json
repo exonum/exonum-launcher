@@ -6,6 +6,14 @@
     },
     "transactions": [
         {
+            "type": "deploy",
+            "artifact_spec": {
+                "name": "cryptocurrency",
+                "version": "0.0.1"
+            }
+        },
+        {
+            "type": "init",
             "artifact_spec": {
                 "name": "cryptocurrency",
                 "version": "0.0.1"
