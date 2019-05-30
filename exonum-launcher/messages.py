@@ -123,12 +123,18 @@ class DeployMessages:
         return json_format.Parse(json_data, data)
 
 
+def get_all_service_messages(service_name: str) -> Dict[str, type]:
+    # Warning: this function assumes that messages for
+    # artifact named `example` lie in `example/example_pb2.py`
+    service = importlib.import_module('{}.{}_pb2'.format(service_name, service_name))
+
+    return service.__dict__
+
+
 def get_service_init_structure(service_name: str) -> type:
     # Warning: this function assumes that ConstructorData for
     # artifact named `example` lies in `example/example_pb2.py`
-    service = importlib.import_module('{}.{}_pb2'.format(service_name, service_name))
-
-    return service.__dict__['ConstructorData']
+    return get_all_service_messages(service_name)['ConstructorData']
 
 
 def get_signed_tx(pk: bytes, sk: bytes, artifact: Dict[Any, Any]) -> protocol.SignedMessage:
@@ -208,3 +214,25 @@ def get_constructor_data_classes() -> Dict[str, type]:
             constructor_data_classes[module] = service.__dict__['ConstructorData']
 
     return constructor_data_classes
+
+
+def get_custom_tx(pk: bytes, sk: bytes, artifact: Dict[Any, Any]) -> protocol.SignedMessage:
+    artifact_name = artifact["artifact"]
+    service_id = artifact["service_id"]
+    method_id = artifact["method_id"]
+    tx_name = artifact["type"]
+    json_data = json.dumps(artifact["data"])
+
+    call_info = DeployMessages.call_info(service_id, method_id)
+
+    tx = get_all_service_messages(artifact_name)[tx_name]()
+
+    json_format.Parse(json_data, tx)
+
+    tx = DeployMessages.any_tx(call_info, tx)
+
+    exonum_msg = DeployMessages.exonum_message_from_any_tx(tx)
+
+    signed_tx = DeployMessages.signed_message(exonum_msg, pk, sk)
+
+    return signed_tx

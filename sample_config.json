@@ -22,6 +22,15 @@
             "constructor_data": {
                 "some_number": 45
             }
+        },
+        {
+            "type": "TxCreateWallet",
+            "artifact": "cryptocurrency",
+            "service_id": 1,
+            "method_id": 2,
+            "data": {
+                "name": "Alice"
+            }
         }
     ]
 }

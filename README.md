@@ -86,6 +86,15 @@ Example of expected `json` file (don't forget to set transaction type!):
             "constructor_data": {
                 "some_number": 45
             }
+        },
+        {
+            "type": "CreateWallet",
+            "artifact": "cryptocurrency",
+            "service_id": 1,
+            "method_id": 2,
+            "data": {
+                "name": "Alice"
+            }
         }
     ]
 }
