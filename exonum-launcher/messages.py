@@ -89,7 +89,7 @@ class DeployMessages:
     @staticmethod
     def any_tx(call_info: protocol.CallInfo, payload: Message) -> protocol.AnyTx:
         tx = protocol.AnyTx()
-        tx.dispatch.CopyFrom(call_info)
+        tx.call_info.CopyFrom(call_info)
         tx.payload = payload.SerializeToString()
 
         return tx
