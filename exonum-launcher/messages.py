@@ -72,21 +72,6 @@ class DeployMessages:
         return init_tx
 
     @staticmethod
-    def deploy_init_tx(runtime_id: int,
-                       activation_height: int,
-                       artifact_spec: Message,
-                       instance_name: str,
-                       constructor_data: Message) -> configuration.DeployInitTx:
-        deploy_tx = DeployMessages.deploy_tx(runtime_id, activation_height, artifact_spec)
-        init_tx = DeployMessages.init_tx(runtime_id, artifact_spec, instance_name, constructor_data)
-
-        deploy_init_tx = configuration.DeployInitTx()
-        deploy_init_tx.deploy_tx.CopyFrom(deploy_tx)
-        deploy_init_tx.init_tx.CopyFrom(init_tx)
-
-        return deploy_init_tx
-
-    @staticmethod
     def any_tx(call_info: protocol.CallInfo, payload: Message) -> protocol.AnyTx:
         tx = protocol.AnyTx()
         tx.call_info.CopyFrom(call_info)
@@ -115,50 +100,26 @@ class DeployMessages:
         return signed_message
 
     @staticmethod
-    def constuctor_data(service_name: str, json_data: str) -> Message:
-        ConstructorData = get_service_init_structure(service_name)
+    def service_config(service_name: str, json_data: str) -> Message:
+        ConfigData = get_service_config_structure(service_name)
 
-        data = ConstructorData()
+        data = ConfigData()
 
         return json_format.Parse(json_data, data)
 
 
 def get_all_service_messages(service_name: str) -> Dict[str, type]:
     # Warning: this function assumes that messages for
-    # artifact named `example` lie in `example/example_pb2.py`
-    service = importlib.import_module('{}.{}_pb2'.format(service_name, service_name))
+    # artifact named `example` lie in `example/service_pb2.py`
+    service = importlib.import_module('{}.service_pb2'.format(service_name))
 
     return service.__dict__
 
 
-def get_service_init_structure(service_name: str) -> type:
-    # Warning: this function assumes that ConstructorData for
-    # artifact named `example` lies in `example/example_pb2.py`
-    return get_all_service_messages(service_name)['ConstructorData']
-
-
-def get_signed_tx(pk: bytes, sk: bytes, artifact: Dict[Any, Any]) -> protocol.SignedMessage:
-    artifact_name = artifact["artifact_spec"]["name"]
-    artifact_version = artifact["artifact_spec"]["version"]
-    constructor_data_json = json.dumps(artifact["constructor_data"])
-    instance_name = artifact["instance_name"]
-
-    call_info = DeployMessages.call_info(CONFIGURATION_SERVICE_ID, DEPLOY_INIT_METHOD_ID)
-
-    artifact_spec = DeployMessages.rust_artifact_spec(artifact_name, artifact_version)
-
-    constructor_data = DeployMessages.constuctor_data(artifact_name, constructor_data_json)
-
-    deploy_init_tx = DeployMessages.deploy_init_tx(RUST_RUNTIME_ID, ACTIVATION_HEIGHT_IMMEDIATELY, artifact_spec,
-                                                   instance_name, constructor_data)
-
-    tx = DeployMessages.any_tx(call_info, deploy_init_tx)
-
-    exonum_msg = DeployMessages.exonum_message_from_any_tx(tx)
-
-    signed_tx = DeployMessages.signed_message(exonum_msg, pk, sk)
-
-    return signed_tx
+def get_service_config_structure(service_name: str) -> type:
+    # Warning: this function assumes that Config for
+    # artifact named `example` lies in `example/service_pb2.py`
+    return get_all_service_messages(service_name)['Config']
 
 
 def get_signed_deploy_tx(pk: bytes, sk: bytes, artifact: Dict[Any, Any]) -> protocol.SignedMessage:
@@ -183,16 +144,16 @@ def get_signed_deploy_tx(pk: bytes, sk: bytes, artifact: Dict[Any, Any]) -> prot
 def get_signed_init_tx(pk: bytes, sk: bytes, artifact: Dict[Any, Any]) -> protocol.SignedMessage:
     artifact_name = artifact["artifact_spec"]["name"]
     artifact_version = artifact["artifact_spec"]["version"]
-    constructor_data_json = json.dumps(artifact["constructor_data"])
+    service_config_json = json.dumps(artifact["config"])
     instance_name = artifact["instance_name"]
 
     call_info = DeployMessages.call_info(CONFIGURATION_SERVICE_ID, INIT_METHOD_ID)
 
     artifact_spec = DeployMessages.rust_artifact_spec(artifact_name, artifact_version)
 
-    constructor_data = DeployMessages.constuctor_data(artifact_name, constructor_data_json)
+    service_config = DeployMessages.service_config(artifact_name, service_config_json)
 
-    init_tx = DeployMessages.init_tx(RUST_RUNTIME_ID, artifact_spec, instance_name, constructor_data)
+    init_tx = DeployMessages.init_tx(RUST_RUNTIME_ID, artifact_spec, instance_name, service_config)
 
     tx = DeployMessages.any_tx(call_info, init_tx)
 
@@ -209,9 +170,9 @@ def get_constructor_data_classes() -> Dict[str, type]:
 
     for module in modules_dir:
         if module != "proto":
-            service = importlib.import_module('{}.{}_pb2'.format(module, module))
+            service = importlib.import_module('{}.service_pb2'.format(module))
 
-            constructor_data_classes[module] = service.__dict__['ConstructorData']
+            constructor_data_classes[module] = service.__dict__['Config']
 
     return constructor_data_classes
 
