@@ -100,37 +100,41 @@ class DeployMessages:
         return signed_message
 
     @staticmethod
-    def service_config(service_name: str, json_data: str) -> Message:
-        ConfigData = get_service_config_structure(service_name)
+    def service_config(service_name: str, module_name: str, json_data: str) -> Message:
+        ConfigData = get_service_config_structure(service_name, module_name)
 
         data = ConfigData()
 
         return json_format.Parse(json_data, data)
 
 
-def get_all_service_messages(service_name: str) -> Dict[str, type]:
+def get_all_service_messages(service_name: str, module_name: str) -> Dict[str, type]:
     # Warning: this function assumes that messages for
     # artifact named `example` lie in `example/service_pb2.py`
-    service = importlib.import_module('{}.service_pb2'.format(service_name))
+    service = importlib.import_module(
+        '{}.{}_pb2'.format(service_name, module_name))
 
     return service.__dict__
 
 
-def get_service_config_structure(service_name: str) -> type:
+def get_service_config_structure(service_name: str, module_name: str) -> type:
     # Warning: this function assumes that Config for
     # artifact named `example` lies in `example/service_pb2.py`
-    return get_all_service_messages(service_name)['Config']
+    return get_all_service_messages(service_name, module_name)['Config']
 
 
 def get_signed_deploy_tx(pk: bytes, sk: bytes, artifact: Dict[Any, Any]) -> protocol.SignedMessage:
-    artifact_name = artifact["artifact_spec"]["name"]
-    artifact_version = artifact["artifact_spec"]["version"]
+    artifact_name = artifact["artifact"]["name"]
+    artifact_version = artifact["artifact"]["version"]
 
-    call_info = DeployMessages.call_info(CONFIGURATION_SERVICE_ID, DEPLOY_METHOD_ID)
+    call_info = DeployMessages.call_info(
+        CONFIGURATION_SERVICE_ID, DEPLOY_METHOD_ID)
 
-    artifact_spec = DeployMessages.rust_artifact_spec(artifact_name, artifact_version)
+    artifact_spec = DeployMessages.rust_artifact_spec(
+        artifact_name, artifact_version)
 
-    deploy_tx = DeployMessages.deploy_tx(RUST_RUNTIME_ID, ACTIVATION_HEIGHT_IMMEDIATELY, artifact_spec)
+    deploy_tx = DeployMessages.deploy_tx(
+        RUST_RUNTIME_ID, ACTIVATION_HEIGHT_IMMEDIATELY, artifact_spec)
 
     tx = DeployMessages.any_tx(call_info, deploy_tx)
 
@@ -142,18 +146,23 @@ def get_signed_deploy_tx(pk: bytes, sk: bytes, artifact: Dict[Any, Any]) -> prot
 
 
 def get_signed_init_tx(pk: bytes, sk: bytes, artifact: Dict[Any, Any]) -> protocol.SignedMessage:
-    artifact_name = artifact["artifact_spec"]["name"]
-    artifact_version = artifact["artifact_spec"]["version"]
+    artifact_name = artifact["artifact"]["name"]
+    artifact_module = artifact["artifact"]["module"]
+    artifact_version = artifact["artifact"]["version"]
     service_config_json = json.dumps(artifact["config"])
     instance_name = artifact["instance_name"]
 
-    call_info = DeployMessages.call_info(CONFIGURATION_SERVICE_ID, INIT_METHOD_ID)
+    call_info = DeployMessages.call_info(
+        CONFIGURATION_SERVICE_ID, INIT_METHOD_ID)
 
-    artifact_spec = DeployMessages.rust_artifact_spec(artifact_name, artifact_version)
+    artifact_spec = DeployMessages.rust_artifact_spec(
+        artifact_name, artifact_version)
 
-    service_config = DeployMessages.service_config(artifact_name, service_config_json)
+    service_config = DeployMessages.service_config(
+        artifact_name, artifact_module, service_config_json)
 
-    init_tx = DeployMessages.init_tx(RUST_RUNTIME_ID, artifact_spec, instance_name, service_config)
+    init_tx = DeployMessages.init_tx(
+        RUST_RUNTIME_ID, artifact_spec, instance_name, service_config)
 
     tx = DeployMessages.any_tx(call_info, init_tx)
 
@@ -164,21 +173,9 @@ def get_signed_init_tx(pk: bytes, sk: bytes, artifact: Dict[Any, Any]) -> protoc
     return signed_tx
 
 
-def get_constructor_data_classes() -> Dict[str, type]:
-    modules_dir = os.listdir(proto_path)
-    constructor_data_classes = {}
-
-    for module in modules_dir:
-        if module != "proto":
-            service = importlib.import_module('{}.service_pb2'.format(module))
-
-            constructor_data_classes[module] = service.__dict__['Config']
-
-    return constructor_data_classes
-
-
 def get_custom_tx(pk: bytes, sk: bytes, artifact: Dict[Any, Any]) -> protocol.SignedMessage:
-    artifact_name = artifact["artifact"]
+    artifact_name = artifact["artifact"]["name"]
+    artifact_module = artifact["artifact"]["module"]
     service_id = artifact["service_id"]
     method_id = artifact["method_id"]
     tx_name = artifact["type"]
@@ -186,7 +183,7 @@ def get_custom_tx(pk: bytes, sk: bytes, artifact: Dict[Any, Any]) -> protocol.Si
 
     call_info = DeployMessages.call_info(service_id, method_id)
 
-    tx = get_all_service_messages(artifact_name)[tx_name]()
+    tx = get_all_service_messages(artifact_name, artifact_module)[tx_name]()
 
     json_format.Parse(json_data, tx)
 

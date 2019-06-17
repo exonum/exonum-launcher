@@ -7,15 +7,17 @@
     "transactions": [
         {
             "type": "deploy",
-            "artifact_spec": {
+            "artifact": {
                 "name": "exonum-cryptocurrency-advanced",
+                "module": "cryptocurrency",
                 "version": "0.11.0"
             }
         },
         {
             "type": "init",
-            "artifact_spec": {
+            "artifact": {
                 "name": "exonum-cryptocurrency-advanced",
+                "module": "cryptocurrency",
                 "version": "0.11.0"
             },
             "instance_name": "xnm-token",
@@ -23,16 +25,20 @@
         },
         {
             "type": "init",
-            "artifact_spec": {
+            "artifact": {
                 "name": "exonum-cryptocurrency-advanced",
+                "module": "cryptocurrency",
                 "version": "0.11.0"
             },
             "instance_name": "tst-token",
             "config": {}
-        },        
+        },
         {
             "type": "CreateWallet",
-            "artifact": "exonum-cryptocurrency-advanced",
+            "artifact": {
+                "name": "exonum-cryptocurrency-advanced",
+                "module": "cryptocurrency"
+            },
             "service_id": 1,
             "method_id": 2,
             "data": {
@@ -41,12 +47,15 @@
         },
         {
             "type": "CreateWallet",
-            "artifact": "exonum-cryptocurrency-advanced",
+            "artifact": {
+                "name": "exonum-cryptocurrency-advanced",
+                "module": "cryptocurrency"
+            },
             "service_id": 2,
             "method_id": 2,
             "data": {
                 "name": "Bob"
             }
-        }        
+        }
     ]
 }

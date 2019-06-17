@@ -15,7 +15,8 @@ class ExonumClient(object):
         self.schema = "https" if ssl else "http"
         self.hostname = hostname
         self.public_api_port = public_api_port
-        self.tx_url = self.TX_URL.format(self.schema, hostname, public_api_port)
+        self.tx_url = self.TX_URL.format(
+            self.schema, hostname, public_api_port)
 
     def send_raw_tx(self, tx: bytes) -> Dict[str, str]:
         try:

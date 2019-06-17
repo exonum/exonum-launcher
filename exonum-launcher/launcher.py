@@ -14,7 +14,8 @@ def main(args) -> None:
 
     exonum_cfg = data["exonum"]
 
-    client = ExonumClient(exonum_cfg["hostname"], exonum_cfg["public_api_port"], exonum_cfg["ssl"])
+    client = ExonumClient(
+        exonum_cfg["hostname"], exonum_cfg["public_api_port"], exonum_cfg["ssl"])
 
     pk, sk = gen_keypair()
 
