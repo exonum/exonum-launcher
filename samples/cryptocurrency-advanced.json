@@ -39,7 +39,7 @@
                 "name": "exonum-cryptocurrency-advanced",
                 "module": "cryptocurrency"
             },
-            "service_id": 1,
+            "service_id": 2,
             "method_id": 2,
             "data": {
                 "name": "Alice"
@@ -51,7 +51,7 @@
                 "name": "exonum-cryptocurrency-advanced",
                 "module": "cryptocurrency"
             },
-            "service_id": 2,
+            "service_id": 3,
             "method_id": 2,
             "data": {
                 "name": "Bob"
