@@ -1,34 +1,66 @@
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 import time
+import yaml
 
-from .utils import gen_keypair, load_config
-from .messages import DeployMessages, get_signed_deploy_tx, get_signed_init_tx, get_custom_tx
-from .client import ExonumClient
+from .configuration import Configuration, Artifact, Instance
+from .client import SupervisorClient
+
+
+def deploy_all(networks: List[Any], artifact: Artifact):
+    for network in networks:
+        client = SupervisorClient.from_dict(network)
+        txid = client.deploy_artifact(artifact, 100000)
+
+        print(
+            "[{}] -> Deploy artifact '{}' with id: {}".format(network["host"], artifact.name, txid))
+
+
+def start_all(networks: List[Any], instance: Instance):
+    for network in networks:
+        client = SupervisorClient.from_dict(network)
+        txid = client.start_service(instance)
+
+        print(
+            "[{}] -> Start service '{}' with id: {}".format(network["host"], instance.name, txid))
 
 
 def main(args) -> None:
-    data = load_config(args.input)
+    config = Configuration.from_yaml(args.input)
 
-    transactions = data["transactions"]
+    # Deploy artifacts
+    for artifact in config.artifacts.values():
+        deploy_all(config.networks, artifact)
+        time.sleep(2)  # wait between blocks
 
-    exonum_cfg = data["exonum"]
+    # Start instances 
+    for instance in config.instances:
+        start_all(config.networks, instance)
+        time.sleep(2)  # wait between blocks        
 
-    client = ExonumClient(
-        exonum_cfg["hostname"], exonum_cfg["public_api_port"], exonum_cfg["ssl"])
+    # Start services
 
-    pk, sk = gen_keypair()
+        # data = load_config(args.input)
 
-    for transaction in transactions:
-        signed_tx = None
-        if transaction['type'] == 'deploy':
-            signed_tx = get_signed_deploy_tx(pk, sk, transaction)
-        elif transaction['type'] == 'init':
-            signed_tx = get_signed_init_tx(pk, sk, transaction)
-        else:
-            signed_tx = get_custom_tx(pk, sk, transaction)
+        # transactions = data["transactions"]
 
-        response = client.send_raw_tx(signed_tx.SerializeToString())
-        print(response)
+        # exonum_cfg = data["exonum"]
 
-        time.sleep(1)  # 1 second wait between blocks
+        # client = ExonumClient(
+        #     exonum_cfg["hostname"], exonum_cfg["public_api_port"], exonum_cfg["ssl"])
+
+        # pk, sk = gen_keypair()
+
+        # for transaction in transactions:
+        #     signed_tx = None
+        #     if transaction['type'] == 'deploy':
+        #         signed_tx = get_signed_deploy_tx(pk, sk, transaction)
+        #     elif transaction['type'] == 'init':
+        #         signed_tx = get_signed_init_tx(pk, sk, transaction)
+        #     else:
+        #         signed_tx = get_custom_tx(pk, sk, transaction)
+
+        #     response = client.send_raw_tx(signed_tx.SerializeToString())
+        #     print(response)
+
+        #     time.sleep(1)  # 1 second wait between blocks
