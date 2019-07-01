@@ -2,10 +2,6 @@ import yaml
 import json
 
 from typing import Dict, Any
-from google.protobuf.message import Message
-import google.protobuf.json_format as JsonFormat
-
-from .messages import get_service_config_structure
 
 RUNTIMES = {
     "rust": 0,
@@ -15,24 +11,27 @@ RUNTIMES = {
 class Artifact(object):
     @staticmethod
     def from_dict(module: str, data: Dict[Any, Any]):
-        return Artifact(data["name"], data["runtime"], module)
+        return Artifact(
+            name=data["name"],
+            runtime=data["runtime"],
+            module=module,
+            deadline_height=data["deadline_height"]
+        )
 
-    def __init__(self, name: str, runtime: str, module: str) -> None:
+    def __init__(self, name: str, runtime: str, module: str, deadline_height: int) -> None:
         self.name = name
+        self.module = module
         self.runtime = runtime
         self.runtime_id = RUNTIMES[runtime]
-        ConfigSpec = get_service_config_structure(module, module)
-        self.config_spec = ConfigSpec()
+        self.deadline_height = deadline_height
 
-    def serialize_config(self, data: Any) -> Message:
-        json_data = json.dumps(data)
-        JsonFormat.Parse(json_data, self.config_spec)
 
 class Instance(object):
     def __init__(self, artifact: Artifact, name: str, config: Any) -> None:
         self.artifact = artifact
         self.name = name
-        self.config = artifact.serialize_config(config)
+        self.config = config
+
 
 class Configuration(object):
     @staticmethod

@@ -11,6 +11,7 @@ artifacts:
   cryptocurrency:
     runtime: rust
     name: "exonum-cryptocurrency-advanced/0.11.0"
+    deadline_height: 100000
   
 instances:
   xnm-token:
