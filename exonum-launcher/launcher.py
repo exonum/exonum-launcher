@@ -10,7 +10,7 @@ from .client import SupervisorClient
 def deploy_all(networks: List[Any], artifact: Artifact):
     for network in networks:
         client = SupervisorClient.from_dict(network)
-        txid = client.deploy_artifact(artifact)
+        client.deploy_artifact(artifact)
         print(
             "[{}] -> Deploy artifact '{}'".format(network["host"], artifact.name))
 
@@ -18,8 +18,7 @@ def deploy_all(networks: List[Any], artifact: Artifact):
 def start_all(networks: List[Any], instance: Instance):
     for network in networks:
         client = SupervisorClient.from_dict(network)
-        txid = client.start_service(instance)
-
+        client.start_service(instance)
         print(
             "[{}] -> Start service '{}'".format(network["host"], instance.name))
 

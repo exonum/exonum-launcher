@@ -11,21 +11,22 @@ from google.protobuf.any_pb2 import Any as PbAny
 
 from .utils import sign
 from .configuration import Artifact, Instance
+from .compiler import mangle_service_name
 
 # Dynamically load protobuf modules.
 proto_path = os.environ.get("EXONUM_LAUNCHER_PROTO_PATH", "")
 sys.path.append(proto_path)
 
-from proto import runtime_pb2 as runtime
-from proto import protocol_pb2 as protocol
-from proto import helpers_pb2 as helpers
-from proto import supervisor_pb2 as supervisor
+from exonum import supervisor_pb2 as supervisor
+from exonum import helpers_pb2 as helpers
+from exonum import protocol_pb2 as protocol
+from exonum import runtime_pb2 as runtime
 
 def get_all_service_messages(service_name: str, module_name: str) -> Dict[str, type]:
     # Warning: this function assumes that messages for
     # artifact named `example` lie in `example/service_pb2.py`
     service = importlib.import_module(
-        '{}.{}_pb2'.format(service_name, module_name))
+        'services.{}.{}_pb2'.format(service_name, module_name))
 
     return service.__dict__
 
@@ -35,11 +36,13 @@ def get_service_config_structure(service_name: str, module_name: str) -> type:
     # artifact named `example` lies in `example/service_pb2.py`
     return get_all_service_messages(service_name, module_name)['Config']
 
+
 def artifact_id(artifact: Artifact) -> runtime.ArtifactId:
     artifact_id = runtime.ArtifactId()
     artifact_id.runtime_id = artifact.runtime_id
     artifact_id.name = artifact.name
     return artifact_id
+
 
 def serialize_config(artifact: Artifact, data: Any) -> PbAny:
     json_data = json.dumps(data)
@@ -50,6 +53,7 @@ def serialize_config(artifact: Artifact, data: Any) -> PbAny:
     output.Pack(msg)
 
     return output
+
 
 class Supervisor:
     @staticmethod
@@ -64,5 +68,6 @@ class Supervisor:
         msg = supervisor.StartService()
         msg.artifact.CopyFrom(artifact_id(instance.artifact))
         msg.name = instance.name
-        msg.config.CopyFrom(serialize_config(instance.artifact, instance.config))
+        msg.config.CopyFrom(serialize_config(
+            instance.artifact, instance.config))
         return msg

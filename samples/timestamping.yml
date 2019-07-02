@@ -1,0 +1,26 @@
+networks:
+  - host: "http://127.0.0.1"
+    public-api-port: 8080
+    private-api-port: 8081
+
+artifacts:
+  time:
+    runtime: rust
+    name: "exonum-time/0.11.0"
+    deadline_height: 10000
+  timestamping:
+    runtime: rust
+    name: "exonum-timestamping/0.11.0"
+    deadline_height: 10000
+  
+instances:
+  time:
+    artifact: time
+    deadline_height: 10000
+    config: []
+  timestamping:
+    artifact: timestamping
+    deadline_height: 10000
+    config:
+      time_service_name: "time"
+      time_service_id: 2

@@ -9,7 +9,7 @@ from .messages import Supervisor
 
 
 def _msg_to_hex(msg) -> str:
-    return encode(msg.SerializeToString(deterministic=True))
+    return encode(msg.SerializeToString())
 
 
 class SupervisorClient(object):
