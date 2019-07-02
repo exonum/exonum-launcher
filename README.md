@@ -59,48 +59,29 @@ optional arguments:
                         A path to the directory with generated proto files
 ```
 
-Example of expected `json` file (don't forget to set transaction type!):
+Example of expected `yaml` file:
 
-```json
-{
-    "exonum": {
-        "hostname": "127.0.0.1",
-        "public_api_port": 8000,
-        "ssl": false
-    },
-    "transactions": [
-        {
-            "type": "deploy",
-            "artifact_spec": {
-                "name": "cryptocurrency",
-                "version": "0.1.0"
-            }
-        },
-        {
-            "type": "init",
-            "artifact_spec": {
-                "name": "cryptocurrency",
-                "version": "0.1.0"
-            },
-            "instance_name": "XNM token",
-            "constructor_data": {
-                "some_number": 45
-            }
-        },
-        {
-            "type": "CreateWallet",
-            "artifact": "cryptocurrency",
-            "service_id": 1,
-            "method_id": 2,
-            "data": {
-                "name": "Alice"
-            }
-        }
-    ]
-}
+```yaml
+networks:
+  - host: "http://127.0.0.1"
+    public-api-port: 8080
+    private-api-port: 8081
+
+deadline_height: 10000
+
+artifacts:
+  cryptocurrency:
+    runtime: rust
+    name: "exonum-cryptocurrency-advanced/0.11.0"
+  
+instances:
+  xnm-token:
+    artifact: cryptocurrency
+    config: []
+  nnm-token:
+    artifact: "cryptocurrency"
+    config: []
 ```
-
-Usage of the `server` subcommand is equivalent to `run` command. However, if any transactions are listed in the "transactions" section, they won't be sent.
 
 ## Warning
 
@@ -110,7 +91,7 @@ For example:
 
 You want to send transaction to initialize `cryptocurrency` artifact. Then make sure that `.proto` file for that service is called `cryptocurrency.proto` and in the `compile` command you write `-s cryptocurrency:some/path`.
 
-Also this `.proto` file should contain `ConstructorData` message.
+Also this `.proto` file should contain `Config` message.
 
 Otherwise you'll get an error.
 
