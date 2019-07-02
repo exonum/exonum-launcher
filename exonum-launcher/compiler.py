@@ -43,6 +43,10 @@ def fix_proto_imports(path: str, module: str) -> None:
             file_out.write(line)
 
 
+def mangle_service_name(name=str) -> str:
+    return "es_" + name
+
+
 def create_dir_if_not_exist(path: str) -> None:
     if not os.path.exists(path):
         os.makedirs(path)
