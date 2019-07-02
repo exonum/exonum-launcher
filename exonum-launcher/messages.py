@@ -11,7 +11,6 @@ from google.protobuf.any_pb2 import Any as PbAny
 
 from .utils import sign
 from .configuration import Artifact, Instance
-from .compiler import mangle_service_name
 
 # Dynamically load protobuf modules.
 proto_path = os.environ.get("EXONUM_LAUNCHER_PROTO_PATH", "")
@@ -68,6 +67,7 @@ class Supervisor:
         msg = supervisor.StartService()
         msg.artifact.CopyFrom(artifact_id(instance.artifact))
         msg.name = instance.name
+        msg.deadline_height = instance.deadline_height
         msg.config.CopyFrom(serialize_config(
             instance.artifact, instance.config))
         return msg

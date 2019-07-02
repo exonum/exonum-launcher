@@ -15,15 +15,14 @@ class Artifact(object):
             name=data["name"],
             runtime=data["runtime"],
             module=module,
-            deadline_height=data["deadline_height"]
         )
 
-    def __init__(self, name: str, runtime: str, module: str, deadline_height: int) -> None:
+    def __init__(self, name: str, runtime: str, module: str) -> None:
         self.name = name
         self.module = module
         self.runtime = runtime
         self.runtime_id = RUNTIMES[runtime]
-        self.deadline_height = deadline_height
+        self.deadline_height = None
 
 
 class Instance(object):
@@ -31,7 +30,10 @@ class Instance(object):
         self.artifact = artifact
         self.name = name
         self.config = config
+        self.deadline_height = None
 
+def _get_specific(name: Any, value: Dict[Any, Any], parent: Dict[Any, Any]) -> Any:
+    return value.get(name, parent.get(name))
 
 class Configuration(object):
     @staticmethod
@@ -45,14 +47,17 @@ class Configuration(object):
         self.instances = list()
 
         # Imports configuration parser for each artifact.
-        for module, artifact in data["artifacts"].items():
-            artifact = Artifact.from_dict(module, artifact)
-            self.artifacts[str(module)] = artifact
+        for name, value in data["artifacts"].items():
+            artifact = Artifact.from_dict(name, value)
+            artifact.deadline_height = _get_specific("deadline_height", value, parent=data)
+            self.artifacts[str(name)] = artifact
 
         # Converts config for each instance into protobuf
-        for (name, instance) in data["instances"].items():
-            artifact = self.artifacts[instance["artifact"]]
-            self.instances += [Instance(artifact, name, instance["config"])]
+        for (name, value) in data["instances"].items():
+            artifact = self.artifacts[value["artifact"]]
+            instance = Instance(artifact, name, value["config"])
+            instance.deadline_height = _get_specific("deadline_height", value, parent=data)
+            self.instances += [instance]
 
         return None
 
