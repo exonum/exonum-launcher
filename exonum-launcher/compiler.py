@@ -1,17 +1,17 @@
-from typing import Optional
+from typing import Optional, List
 
 import os
 import shutil
 import subprocess
 
 PROTOC_ENV_NAME = "PROTOC"
-EXONUM_PROTO_PATH = "--proto_path={}/exonum/src/proto/schema/exonum"
-SERVICE_PROTO_PATH = "--proto_path={}"
-HELPERS_PROTO = "helpers.proto"
-SUPERVISOR_PROTO = "supervisor.proto"
-RUNTIME_PROTO = "runtime.proto"
-PROTOCOL_PROTO = "protocol.proto"
-BLOCKCHAIN_PROTO = "blockchain.proto"
+EXONUM_MODULES = [
+    "helpers",
+    "supervisor",
+    "runtime",
+    "blockchain",
+    "protocol",
+]
 
 
 def find_protoc() -> Optional[str]:
@@ -22,25 +22,29 @@ def find_protoc() -> Optional[str]:
 
 
 def find_proto_files(path: str) -> str:
-    return " ".join(filter(lambda file: file.endswith(".proto"), os.listdir(path)))
+    files = []
+    for module_path in os.listdir(path):
+        module, _pattern, tail = module_path.rpartition(".proto")
+        if not tail and module:
+            files += [module]
+    return files
 
 
-def fix_proto_imports(path: str) -> None:
+def fix_proto_imports(path: str, module: str) -> None:
     ''' Fixes imports in generated files '''
     with open(path, "rt") as file_in:
         file_content = file_in.readlines()
 
     with open(path, "wt") as file_out:
         for line in file_content:
-            if line == "import helpers_pb2 as helpers__pb2\n":
-                line = "from . import helpers_pb2 as helpers__pb2\n"
-            elif line == "import blockchain_pb2 as blockchain__pb2\n":
-                line = "from . import blockchain_pb2 as blockchain__pb2\n"
-            elif line == "import runtime_pb2 as runtime__pb2\n":
-                line = "from . import runtime_pb2 as runtime__pb2\n"
-            elif line == "import supervisor_pb2 as supervisor__pb2\n":
-                line = "from . import supervisor_pb2 as supervisor__pb2\n"
+            if line == "import {}_pb2 as {}__pb2\n".format(module, module):
+                line = "from . import {}_pb2 as {}__pb2\n".format(
+                    module, module)
             file_out.write(line)
+
+
+def mangle_service_name(name=str) -> str:
+    return "es_" + name
 
 
 def create_dir_if_not_exist(path: str) -> None:
@@ -48,20 +52,43 @@ def create_dir_if_not_exist(path: str) -> None:
         os.makedirs(path)
 
 
-def run_protoc(protoc_args, output_dir: str) -> None:
-    create_dir_if_not_exist(output_dir)
-    protoc_process = subprocess.Popen(
-        protoc_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-    )
-    code = protoc_process.wait()
-    if code == 0:
-        print("Proto files for {} were compiled successfully".format(output_dir))
-    else:
-        out, err = protoc_process.communicate()
-        print("Error acquired while compiling files: {}".format(err.decode("utf-8")))
+class Protoc:
 
-    for file in filter(lambda f: f.endswith(".py"), os.listdir(output_dir)):
-        fix_proto_imports("{}/{}".format(output_dir, file))
+    def __init__(self, protoc_path: str, input_dirs: [str], output_dir: str) -> None:
+        self.protoc_path = protoc_path
+        self.output_dir = output_dir
+        self.input_dirs = input_dirs
+        self.modules = []
+
+    def args(self) -> List[str]:
+        args = [self.protoc_path]
+        for input_dir in self.input_dirs:
+            args += ["--proto_path=" + input_dir]
+        for module in self.modules:
+            args += [module + ".proto"]
+        args += ["--python_out=" + self.output_dir]
+        return args
+
+    def run(self) -> None:
+        create_dir_if_not_exist(self.output_dir)
+        protoc_process = subprocess.Popen(
+            self.args(),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        code = protoc_process.wait()
+        if code == 0:
+            print("Proto files for {} were compiled successfully".format(
+                self.output_dir))
+        else:
+            _out, err = protoc_process.communicate()
+            print("Error acquired while compiling files: {}".format(
+                err.decode("utf-8")))
+
+        for file in filter(lambda f: f.endswith(".py"), os.listdir(self.output_dir)):
+            path = "{}/{}".format(self.output_dir, file)
+            for module in self.modules:
+                fix_proto_imports(path, module)
 
 
 def main(args) -> None:
@@ -71,28 +98,23 @@ def main(args) -> None:
         print("Protobuf compiler not found")
         exit(1)
 
-    output_dir = os.path.join(args.output, 'proto')
-    protoc_args = [
-        path_to_protoc,
-        EXONUM_PROTO_PATH.format(args.exonum_sources),
-        HELPERS_PROTO,
-        SUPERVISOR_PROTO,
-        RUNTIME_PROTO,
-        PROTOCOL_PROTO,
-        BLOCKCHAIN_PROTO,
-        "--python_out={}".format(output_dir),
-    ]
-    run_protoc(protoc_args, output_dir)
+    output_dir = os.path.join(args.output, 'exonum')
+    exonum_proto_path = os.path.join(
+        args.exonum_sources, 'exonum', 'src', 'proto', 'schema', 'exonum')
+
+    protoc = Protoc(protoc_path=path_to_protoc,
+                    input_dirs=[exonum_proto_path],
+                    output_dir=output_dir)
+    protoc.modules = EXONUM_MODULES.copy()
+    protoc.run()
 
     for service_info in args.services:
         service_name, service_path = service_info.split(':')
-        output_dir = os.path.join(args.output, service_name)
-        protoc_args = [
-            path_to_protoc,
-            EXONUM_PROTO_PATH.format(args.exonum_sources),
-            SERVICE_PROTO_PATH.format(service_path),
-            HELPERS_PROTO,
-            find_proto_files(service_path),
-            "--python_out={}".format(output_dir),
-        ]
-        run_protoc(protoc_args, output_dir)
+        output_dir = os.path.join(
+            args.output, "services", service_name)
+
+        protoc = Protoc(protoc_path=path_to_protoc,
+                        input_dirs=[exonum_proto_path, service_path],
+                        output_dir=output_dir)
+        protoc.modules = EXONUM_MODULES.copy() + find_proto_files(service_path)
+        protoc.run()
