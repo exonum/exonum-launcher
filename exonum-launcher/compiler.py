@@ -8,7 +8,7 @@ PROTOC_ENV_NAME = "PROTOC"
 EXONUM_PROTO_PATH = "--proto_path={}/exonum/src/proto/schema/exonum"
 SERVICE_PROTO_PATH = "--proto_path={}"
 HELPERS_PROTO = "helpers.proto"
-CONFIGURATION_PROTO = "configuration.proto"
+SUPERVISOR_PROTO = "supervisor.proto"
 RUNTIME_PROTO = "runtime.proto"
 PROTOCOL_PROTO = "protocol.proto"
 BLOCKCHAIN_PROTO = "blockchain.proto"
@@ -36,6 +36,10 @@ def fix_proto_imports(path: str) -> None:
                 line = "from . import helpers_pb2 as helpers__pb2\n"
             elif line == "import blockchain_pb2 as blockchain__pb2\n":
                 line = "from . import blockchain_pb2 as blockchain__pb2\n"
+            elif line == "import runtime_pb2 as runtime__pb2\n":
+                line = "from . import runtime_pb2 as runtime__pb2\n"
+            elif line == "import supervisor_pb2 as supervisor__pb2\n":
+                line = "from . import supervisor_pb2 as supervisor__pb2\n"
             file_out.write(line)
 
 
@@ -72,7 +76,7 @@ def main(args) -> None:
         path_to_protoc,
         EXONUM_PROTO_PATH.format(args.exonum_sources),
         HELPERS_PROTO,
-        CONFIGURATION_PROTO,
+        SUPERVISOR_PROTO,
         RUNTIME_PROTO,
         PROTOCOL_PROTO,
         BLOCKCHAIN_PROTO,

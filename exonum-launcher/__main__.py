@@ -12,7 +12,8 @@ def run() -> None:
         title="subcommands"
     )
 
-    parser_compile = sub_parser.add_parser("compile", help="Compiles proto files into Python equivalent")
+    parser_compile = sub_parser.add_parser(
+        "compile", help="Compiles proto files into Python equivalent")
     parser_compile.add_argument(
         "-e",
         "--exonum-sources",
@@ -53,7 +54,8 @@ def run() -> None:
     )
     parser_run.set_defaults(func=prepare_launcher)
 
-    parser_run = sub_parser.add_parser("server", help="Runs the web UI for service launcher")
+    parser_run = sub_parser.add_parser(
+        "server", help="Runs the web UI for service launcher")
     parser_run.add_argument(
         "-i",
         "--input",
