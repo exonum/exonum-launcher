@@ -16,10 +16,11 @@ from .configuration import Artifact, Instance
 proto_path = os.environ.get("EXONUM_LAUNCHER_PROTO_PATH", "")
 sys.path.append(proto_path)
 
-from exonum import supervisor_pb2 as supervisor
-from exonum import helpers_pb2 as helpers
-from exonum import protocol_pb2 as protocol
-from exonum import runtime_pb2 as runtime
+from exonum_proto import supervisor_pb2 as supervisor
+from exonum_proto import helpers_pb2 as helpers
+from exonum_proto import protocol_pb2 as protocol
+from exonum_proto import runtime_pb2 as runtime
+
 
 def get_all_service_messages(service_name: str, module_name: str) -> Dict[str, type]:
     # Warning: this function assumes that messages for
