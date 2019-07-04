@@ -98,7 +98,7 @@ def main(args) -> None:
         print("Protobuf compiler not found")
         exit(1)
 
-    output_dir = os.path.join(args.output, 'exonum')
+    output_dir = os.path.join(args.output, 'exonum_proto')
     exonum_proto_path = os.path.join(
         args.exonum_sources, 'exonum', 'src', 'proto', 'schema', 'exonum')
 

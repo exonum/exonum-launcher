@@ -15,13 +15,15 @@ class Artifact(object):
             name=data["name"],
             runtime=data["runtime"],
             module=module,
+            spec=data.get("spec", None)
         )
 
-    def __init__(self, name: str, runtime: str, module: str) -> None:
+    def __init__(self, name: str, runtime: str, module: str, spec: Any) -> None:
         self.name = name
         self.module = module
         self.runtime = runtime
         self.runtime_id = RUNTIMES[runtime]
+        self.spec = spec
         self.deadline_height = None
 
 
@@ -55,7 +57,7 @@ class Configuration(object):
         # Converts config for each instance into protobuf
         for (name, value) in data["instances"].items():
             artifact = self.artifacts[value["artifact"]]
-            instance = Instance(artifact, name, value["config"])
+            instance = Instance(artifact, name, value.get("config", None))
             instance.deadline_height = _get_specific("deadline_height", value, parent=data)
             self.instances += [instance]
 
