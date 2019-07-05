@@ -22,7 +22,6 @@ from exonum_proto import helpers_pb2 as helpers
 from exonum_proto import supervisor_pb2 as supervisor
 
 
-
 def get_all_service_messages(service_name: str, module_name: str) -> Dict[str, type]:
     # Warning: this function assumes that messages for
     # artifact named `example` lie in `example/service_pb2.py`
