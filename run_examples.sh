@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
 # Takes a path argument and returns it as an absolute path. 
 # No-op if the path is already absolute.

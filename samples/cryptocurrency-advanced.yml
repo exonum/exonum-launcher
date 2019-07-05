@@ -17,7 +17,5 @@ artifacts:
 instances:
   xnm-token:
     artifact: cryptocurrency
-    config: []
   nnm-token:
     artifact: "cryptocurrency"
-    config: []

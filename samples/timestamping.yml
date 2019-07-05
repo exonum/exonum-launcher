@@ -16,7 +16,6 @@ artifacts:
 instances:
   time:
     artifact: time
-    config: []
   timestamping:
     artifact: timestamping
     config:
