@@ -67,8 +67,8 @@ def serialize_config(artifact: Artifact, data: Any) -> PbAny:
 
 class Supervisor:
     @staticmethod
-    def deploy_artifact(artifact: Artifact) -> supervisor.DeployArtifact:
-        msg = supervisor.DeployArtifact()
+    def deploy_artifact(artifact: Artifact) -> supervisor.DeployRequest:
+        msg = supervisor.DeployRequest()
         msg.artifact.CopyFrom(artifact_id(artifact))
         msg.deadline_height = artifact.deadline_height
         msg.spec.CopyFrom(serialize_spec(artifact, artifact.spec))
