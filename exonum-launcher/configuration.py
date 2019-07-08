@@ -33,6 +33,7 @@ class Instance(object):
         self.name = name
         self.config = config
         self.deadline_height = None
+        self.id = None
 
 def _get_specific(name: Any, value: Dict[Any, Any], parent: Dict[Any, Any]) -> Any:
     return value.get(name, parent.get(name))
