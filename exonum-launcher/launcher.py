@@ -1,10 +1,8 @@
-from typing import Dict, Any, List
-
 import time
-import yaml
+from typing import Any, List
 
-from .configuration import Configuration, Artifact, Instance
 from .client import SupervisorClient
+from .configuration import Artifact, Configuration, Instance
 
 
 def contains_artifact(dispatcher_info: Any, expected: Artifact) -> bool:
@@ -44,6 +42,7 @@ def start_all(networks: List[Any], instance: Instance):
     for network in networks:
         client = SupervisorClient.from_dict(network)
         client.start_service(instance)
+
 
 def assign_instance_id(networks: List[Any], instance: Instance):
     for network in networks:
