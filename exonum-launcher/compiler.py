@@ -21,17 +21,17 @@ def find_protoc() -> Optional[str]:
         return shutil.which("protoc")
 
 
-def find_proto_files(path: str) -> str:
+def find_proto_files(path: str) -> list:
     files = []
     for module_path in os.listdir(path):
         module, _pattern, tail = module_path.rpartition(".proto")
         if not tail and module:
-            files += [module]
+            files.append(module)
     return files
 
 
 def fix_proto_imports(path: str, module: str) -> None:
-    ''' Fixes imports in generated files '''
+    """ Fixes imports in generated files """
     with open(path, "rt") as file_in:
         file_content = file_in.readlines()
 
@@ -43,7 +43,7 @@ def fix_proto_imports(path: str, module: str) -> None:
             file_out.write(line)
 
 
-def mangle_service_name(name=str) -> str:
+def mangle_service_name(name: str) -> str:
     return "es_" + name
 
 
