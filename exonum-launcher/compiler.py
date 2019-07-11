@@ -54,18 +54,22 @@ def create_dir_if_not_exist(path: str) -> None:
 
 class Protoc:
 
-    def __init__(self, protoc_path: str, input_dirs: [str], output_dir: str) -> None:
-        self.protoc_path = protoc_path
+    def __init__(self, include_dirs: [str], output_dir: str) -> None:
+        self.protoc_path = find_protoc()
+        if self.protoc_path is None:
+            print("Protobuf compiler not found")
+            exit(1)
+
         self.output_dir = output_dir
-        self.input_dirs = input_dirs
+        self.include_dirs = include_dirs
         self.modules = []
 
     def args(self) -> List[str]:
         args = [self.protoc_path]
-        for input_dir in self.input_dirs:
-            args += ["--proto_path=" + input_dir]
+        for include_dir in self.include_dirs:
+            args += ["--proto_path=" + include_dir]
         for module in self.modules:
-            args += [module + ".proto"]
+            args += [module]
         args += ["--python_out=" + self.output_dir]
         return args
 
@@ -77,33 +81,18 @@ class Protoc:
             stderr=subprocess.PIPE
         )
         code = protoc_process.wait()
-        if code == 0:
-            print("Proto files for {} were compiled successfully".format(
-                self.output_dir))
-        else:
+        if code != 0:
             _out, err = protoc_process.communicate()
             print("Error acquired while compiling files: {}".format(
                 err.decode("utf-8")))
 
-        for file in filter(lambda f: f.endswith(".py"), os.listdir(self.output_dir)):
-            path = "{}/{}".format(self.output_dir, file)
-            for module in self.modules:
-                fix_proto_imports(path, module)
-
 
 def main(args) -> None:
-    path_to_protoc = find_protoc()
-
-    if path_to_protoc is None:
-        print("Protobuf compiler not found")
-        exit(1)
-
     output_dir = os.path.join(args.output, 'exonum_proto')
     exonum_proto_path = os.path.join(
         args.exonum_sources, 'exonum', 'src', 'proto', 'schema', 'exonum')
 
-    protoc = Protoc(protoc_path=path_to_protoc,
-                    input_dirs=[exonum_proto_path],
+    protoc = Protoc(include_dirs=[exonum_proto_path],
                     output_dir=output_dir)
     protoc.modules = EXONUM_MODULES.copy()
     protoc.run()
@@ -113,8 +102,7 @@ def main(args) -> None:
         output_dir = os.path.join(
             args.output, "services", service_name)
 
-        protoc = Protoc(protoc_path=path_to_protoc,
-                        input_dirs=[exonum_proto_path, service_path],
+        protoc = Protoc(include_dirs=[exonum_proto_path, service_path],
                         output_dir=output_dir)
         protoc.modules = EXONUM_MODULES.copy() + find_proto_files(service_path)
         protoc.run()

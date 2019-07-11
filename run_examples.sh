@@ -53,12 +53,10 @@ cd $TARGET_DIR
 prepare_launcher
 case "$1" in
     'timestamping')
-        compile_protos
         echo "Starting timestamping..."
         run_exonum_config $SOURCE_DIR/samples/timestamping.yml
     ;;
     'cryptocurrency')
-        compile_protos
         echo "Starting cryptocurrency..."
         run_exonum_config $SOURCE_DIR/samples/cryptocurrency-advanced.yml
     ;;

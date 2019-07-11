@@ -16,11 +16,10 @@ from .configuration import Artifact, Instance
 proto_path = os.environ.get("EXONUM_LAUNCHER_PROTO_PATH", "")
 sys.path.append(proto_path)
 
-from exonum_proto import runtime_pb2 as runtime
-from exonum_proto import protocol_pb2 as protocol
-from exonum_proto import helpers_pb2 as helpers
-from exonum_proto import supervisor_pb2 as supervisor
-
+from exonum import runtime_pb2 as runtime
+from exonum import protocol_pb2 as protocol
+from exonum import helpers_pb2 as helpers
+from supervisor import service_pb2 as supervisor
 
 def get_all_service_messages(service_name: str, module_name: str) -> Dict[str, type]:
     # Warning: this function assumes that messages for
@@ -57,7 +56,7 @@ def serialize_config(artifact: Artifact, data: Any) -> PbAny:
     output = PbAny()
     if data is not None:
         json_data = json.dumps(data)
-        msg = get_service_config_structure(artifact.module, artifact.module)()
+        msg = get_service_config_structure(artifact.module, "service")()
         json_format.Parse(json_data, msg)
         output.Pack(msg)
 

@@ -78,7 +78,7 @@ def run() -> None:
 
 
 def prepare_launcher(args):
-    proto_path = args.proto
+    proto_path = os.path.join(args.proto, "out")
 
     os.environ["EXONUM_LAUNCHER_PROTO_PATH"] = proto_path
 
@@ -88,7 +88,9 @@ def prepare_launcher(args):
 
 
 def prepare_server(args):
-    proto_path = args.proto
+    proto_path = os.path.join(args.proto, "out")
+    if not os.path.exists(proto_path):
+        os.makedirs(proto_path)
 
     os.environ["EXONUM_LAUNCHER_PROTO_PATH"] = proto_path
 

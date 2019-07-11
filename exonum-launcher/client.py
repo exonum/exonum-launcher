@@ -2,11 +2,10 @@ from typing import Dict, Any
 
 import requests
 import json
+import importlib
 
 from .utils import encode
 from .configuration import Artifact, Instance
-from .messages import Supervisor
-
 
 def _msg_to_hex(msg) -> str:
     return encode(msg.SerializeToString())
@@ -19,10 +18,8 @@ def _post_json(url: str, data: Any) -> Any:
     return response.json()
 
 
-def _get_json(url: str, query_str=None) -> Any:
-    if query_str is not None:
-        url = url + "?" + query_str
-    response = requests.get(url)
+def _get_json(url: str, params=None) -> Any:
+    response = requests.get(url, params)
     return response.json()
 
 
@@ -43,15 +40,19 @@ class SupervisorClient(object):
         self.public_api_port = public_api_port
         self.private_api_port = private_api_port
 
+    def supervisor(self) -> Any:
+        messages = importlib.import_module(".messages", "exonum-launcher")
+        return messages.Supervisor()
+
     def deploy_artifact(self, artifact: Artifact) -> str:
-        msg = Supervisor.deploy_artifact(artifact)
+        msg = self.supervisor().deploy_artifact(artifact)
         return _post_json(
             self._supervisor_endpoint(method="deploy-artifact", private=True),
             _msg_to_hex(msg)
         )
 
     def start_service(self, instance: Instance) -> str:
-        msg = Supervisor.start_service(instance)
+        msg = self.supervisor().start_service(instance)
         return _post_json(
             self._supervisor_endpoint(method="start-service", private=True),
             _msg_to_hex(msg)
@@ -59,6 +60,12 @@ class SupervisorClient(object):
 
     def dispatcher_info(self) -> Any:
         return _get_json(self._system_endpoint(method="services"))
+
+    def proto_sources(self, artifact: Artifact=None) -> str:
+        params = None
+        if artifact is not None:
+            params = {'artifact': "{}:{}".format(artifact.runtime_id, artifact.name)}
+        return _get_json(self._system_endpoint(method="proto-sources"), params=params)
 
     def _supervisor_endpoint(self, method: str, private=False) -> str:
         if private is False:
