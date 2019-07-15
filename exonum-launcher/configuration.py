@@ -1,7 +1,5 @@
+from typing import Any, Dict, List
 import yaml
-import json
-
-from typing import Dict, Any
 
 RUNTIMES = {
     "rust": 0,
@@ -38,16 +36,16 @@ class Instance(object):
 def _get_specific(name: Any, value: Dict[Any, Any], parent: Dict[Any, Any]) -> Any:
     return value.get(name, parent.get(name))
 
-class Configuration(object):
+class Configuration:
     @staticmethod
     def from_yaml(path: str):
         data = load_yaml(path)
         return Configuration(data)
 
-    def __init__(self, data: Dict[Any, Any]) -> None:
+    def __init__(self, data: Dict[Any, Any]):
         self.networks = data["networks"]
-        self.artifacts = dict()
-        self.instances = list()
+        self.artifacts: Dict[str, Artifact] = dict()
+        self.instances: List[Instance] = list()
 
         # Imports configuration parser for each artifact.
         for name, value in data["artifacts"].items():
@@ -61,8 +59,6 @@ class Configuration(object):
             instance = Instance(artifact, name, value.get("config", None))
             instance.deadline_height = _get_specific("deadline_height", value, parent=data)
             self.instances += [instance]
-
-        return None
 
 
 def load_yaml(path: str) -> Dict[Any, Any]:

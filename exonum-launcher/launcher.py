@@ -1,5 +1,5 @@
 import time
-from typing import Any, List
+from typing import Any, List, Optional
 
 from .client import SupervisorClient
 from .configuration import Artifact, Configuration, Instance
@@ -12,7 +12,7 @@ def contains_artifact(dispatcher_info: Any, expected: Artifact) -> bool:
     return False
 
 
-def find_instance_id(dispatcher_info: Any, instance: Instance) -> str:
+def find_instance_id(dispatcher_info: Any, instance: Instance) -> Optional[str]:
     for value in dispatcher_info["services"]:
         if value["name"] == instance.name:
             return value["id"]

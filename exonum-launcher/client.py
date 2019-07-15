@@ -1,7 +1,7 @@
 from typing import Dict, Any
 
-import requests
 import json
+import requests
 
 from .utils import encode
 from .configuration import Artifact, Instance
