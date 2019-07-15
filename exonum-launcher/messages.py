@@ -1,15 +1,12 @@
-from typing import Dict, Any, List
+from typing import Dict, Any
 import sys
 import os
 import importlib
 import json
 
-import google.protobuf.internal.well_known_types as well_known_types
 import google.protobuf.json_format as json_format
-from google.protobuf.message import Message
 from google.protobuf.any_pb2 import Any as PbAny
 
-from .utils import sign
 from .configuration import Artifact, Instance
 
 # Dynamically load protobuf modules.
@@ -17,8 +14,6 @@ proto_path = os.environ.get("EXONUM_LAUNCHER_PROTO_PATH", "")
 sys.path.append(proto_path)
 
 from exonum_proto import runtime_pb2 as runtime
-from exonum_proto import protocol_pb2 as protocol
-from exonum_proto import helpers_pb2 as helpers
 from exonum_proto import supervisor_pb2 as supervisor
 
 
@@ -38,10 +33,10 @@ def get_service_config_structure(service_name: str, module_name: str) -> type:
 
 
 def artifact_id(artifact: Artifact) -> runtime.ArtifactId:
-    artifact_id = runtime.ArtifactId()
-    artifact_id.runtime_id = artifact.runtime_id
-    artifact_id.name = artifact.name
-    return artifact_id
+    artifact = runtime.ArtifactId()
+    artifact.runtime_id = artifact.runtime_id
+    artifact.name = artifact.name
+    return artifact
 
 
 def serialize_spec(artifact: Artifact, data: Any) -> PbAny:
@@ -49,7 +44,6 @@ def serialize_spec(artifact: Artifact, data: Any) -> PbAny:
     if data is not None:
         # TODO This way is runtime specific.
         pass
-    
     return output
 
 

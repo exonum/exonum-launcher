@@ -17,8 +17,7 @@ EXONUM_MODULES = [
 def find_protoc() -> Optional[str]:
     if PROTOC_ENV_NAME in os.environ:
         return os.getenv(PROTOC_ENV_NAME)
-    else:
-        return shutil.which("protoc")
+    return shutil.which("protoc")
 
 
 def find_proto_files(path: str) -> list:
@@ -37,9 +36,8 @@ def fix_proto_imports(path: str, module: str) -> None:
 
     with open(path, "wt") as file_out:
         for line in file_content:
-            if line == "import {}_pb2 as {}__pb2\n".format(module, module):
-                line = "from . import {}_pb2 as {}__pb2\n".format(
-                    module, module)
+            if line == "import {0}_pb2 as {0}__pb2\n".format(module):
+                line = "from . import {0}_pb2 as {0}__pb2\n".format(module)
             file_out.write(line)
 
 
@@ -54,11 +52,11 @@ def create_dir_if_not_exist(path: str) -> None:
 
 class Protoc:
 
-    def __init__(self, protoc_path: str, input_dirs: [str], output_dir: str) -> None:
+    def __init__(self, protoc_path: str, input_dirs: List[str], output_dir: str) -> None:
         self.protoc_path = protoc_path
         self.output_dir = output_dir
         self.input_dirs = input_dirs
-        self.modules = []
+        self.modules: List[str] = []
 
     def args(self) -> List[str]:
         args = [self.protoc_path]
