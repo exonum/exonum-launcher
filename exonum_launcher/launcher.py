@@ -2,6 +2,7 @@ import codecs
 import time
 import json
 import requests
+from requests.exceptions import ConnectionError
 from typing import Any, List, Dict, Optional
 from exonum import ExonumClient, ModuleManager
 
@@ -22,12 +23,16 @@ def _post_json(url: str, data: Any) -> Any:
     return response
 
 
+class NotCommittedError(Exception):
+    pass
+
+
 class Launcher:
     # TODO should it be configurable?
     ''' Amount of retries to connect to the exonum client. '''
-    RECONNECT_RETRIES = 5
+    RECONNECT_RETRIES = 10
     ''' Wait interval between connection attempts in seconds. '''
-    RECONNECT_INTERVAL = 0.1
+    RECONNECT_INTERVAL = 0.2
 
     def __init__(self, config):
         self.config = config
@@ -104,6 +109,38 @@ class Launcher:
     def completed_initializations(self):
         return self._completed_initializations
 
+    def _post_to_supervisor(self, endpoint, message, private=True) -> List[str]:
+        responses = []
+        for client in self.clients:
+            supervisor_uri = client.service_endpoint('supervisor', endpoint, private)
+            response = _post_json(supervisor_uri, _msg_to_hex(message))
+            responses.append(response.json())
+
+        return responses
+
+    def _wait_until_txs_are_committed(self, tx_hashes: List[str]):
+        client = self.clients[0]
+        for idx, tx_hash in enumerate(tx_hashes):
+            success = False
+            for _ in range(self.RECONNECT_RETRIES):
+                try:
+                    info = client.get_tx_info(tx_hash).json()
+                    status = info['type']
+
+                    if status != 'committed':
+                        with client.create_subscriber() as subscriber:
+                            subscriber.wait_for_new_block()
+                    else:
+                        success = True
+                        break
+                except ConnectionError:
+                    # Exonum API server may be rebooting. Wait for it.
+                    time.sleep(self.RECONNECT_INTERVAL)
+                    continue
+
+            if not success:
+                raise NotCommittedError('Tx [{}] was not committed.'.format(tx_hash))
+
     def deploy_all(self):
         for artifact_name, artifact in self.config.artifacts.items():
             deploy_request = self.service_module.DeployRequest()
@@ -114,23 +151,22 @@ class Launcher:
             deploy_request.deadline_height = artifact.deadline_height
             # deploy_request.spec = ???
 
-            self._pending_deployments[artifact] = []
-            for client in self.clients:
-                deploy_uri = client.service_endpoint('supervisor', 'deploy-artifact', private=True)
-                print(deploy_uri)
-                response = _post_json(deploy_uri, _msg_to_hex(deploy_request))
-                print(response)
-                print(response.json())
-                self._pending_deployments[artifact].append(response)
-                print('OK')
+            self._pending_deployments[artifact] = self._post_to_supervisor('deploy-artifact', deploy_request)
 
     def wait_for_deploy(self):
-        # TODO
-        # for idx, (artifact, tx_hash) in self._pending_deployments.items():
-        # status = self.get_tx_info(tx_hash)['']
-        time.sleep(2)
+        for tx_hashes in self._pending_deployments.values():
+            self._wait_until_txs_are_committed(tx_hashes)
 
-    # TODO error-handling. API may be remounted during this method call.
+        for artifact in self._pending_deployments.keys():
+            for _ in range(self.RECONNECT_RETRIES):
+                if self.check_deployed(artifact):
+                    break
+                else:
+                    time.sleep(self.RECONNECT_INTERVAL)
+
+        self._completed_deployments = self._pending_deployments.keys()
+        self._pending_deployments = {}
+
     def start_all(self):
         for instance in self.config.instances:
             start_request = self.service_module.StartService()
@@ -142,68 +178,39 @@ class Launcher:
             start_request.deadline_height = instance.deadline_height
             # start_request.config = ???
 
-            self._pending_initializations[instance] = []
-            for client in self.clients:
-                start_service_uri = client.service_endpoint('supervisor', 'start-service', private=True)
-                response = _post_json(start_service_uri, _msg_to_hex(start_request))
-                self._pending_initializations[instance].append(response)
-                print('OK')
+            self._pending_initializations[instance] = self._post_to_supervisor('start-service', start_request)
 
     def wait_for_start(self):
-        # TODO
-        time.sleep(2)
+        for tx_hashes in self._pending_initializations.values():
+            self._wait_until_txs_are_committed(tx_hashes)
 
+        for instance in self._pending_initializations.keys():
+            for _ in range(self.RECONNECT_RETRIES):
+                if self.get_instance_id(instance):
+                    break
+                else:
+                    time.sleep(self.RECONNECT_INTERVAL)
 
-# def contains_artifact(dispatcher_info: Any, expected: Artifact) -> bool:
-#     for value in dispatcher_info["artifacts"]:
-#         if value["runtime_id"] == expected.runtime_id and value["name"] == expected.name:
-#             return True
-#     return False
+        self._completed_initializations = self._pending_initializations.keys()
+        self._pending_initializations = {}
 
+    def check_deployed(self, artifact: Artifact, network_id=0) -> bool:
+        dispatcher_info = self.clients[network_id].available_services().json()
 
-# def find_instance_id(dispatcher_info: Any, instance: Instance) -> Optional[str]:
-#     for value in dispatcher_info["services"]:
-#         if value["name"] == instance.name:
-#             return value["id"]
-#     return None
+        for value in dispatcher_info['artifacts']:
+            if value['runtime_id'] == artifact.runtime_id and value['name'] == artifact.name:
+                return True
 
+        return False
 
-# def deploy_all(networks: List[Any], artifact: Artifact):
-#     # Sends deploy transaction.
-#     for network in networks:
-#         client = SupervisorClient.from_dict(network)
-#         client.deploy_artifact(artifact)
+    def get_instance_id(self, instance: Instance, network_id=0) -> Optional[str]:
+        dispatcher_info = self.clients[network_id].available_services().json()
 
+        for value in dispatcher_info['services']:
+            if value['name'] == instance.name:
+                return value['id']
 
-# def check_deploy(networks: List[Any], artifact: Artifact):
-#     for network in networks:
-#         client = SupervisorClient.from_dict(network)
-#         dispatcher_info = client.dispatcher_info()
-#         if not contains_artifact(dispatcher_info, artifact):
-#             raise Exception(
-#                 "Deployment wasn't succeeded for artifact {}.".format(artifact.__dict__))
-
-#         print(
-#             "[{}] -> Deployed artifact '{}'".format(network["host"], artifact.name))
-
-
-# def start_all(networks: List[Any], instance: Instance):
-#     for network in networks:
-#         client = SupervisorClient.from_dict(network)
-#         client.start_service(instance)
-
-
-# def assign_instance_id(networks: List[Any], instance: Instance):
-#     for network in networks:
-#         client = SupervisorClient.from_dict(network)
-#         dispatcher_info = client.dispatcher_info()
-#         instance.id = find_instance_id(dispatcher_info, instance)
-#         if instance.id is None:
-#             raise Exception(
-#                 "Start service wasn't succeeded for instance {}.".format(instance.__dict__))
-
-#         print(
-#             "[{}] -> Started service '{}' with id {}".format(network["host"], instance.name, instance.id))
+        return None
 
 
 def main(args) -> None:
@@ -214,12 +221,16 @@ def main(args) -> None:
 
         launcher.wait_for_deploy()
 
-        # for artifact in launcher.completed_deployments():
-        #     deployed = launcher.check_deployed(artifact)
+        for artifact in launcher.completed_deployments():
+            deployed = launcher.check_deployed(artifact)
+            deployed_str = 'succed' if deployed else 'failed'
+            print('Artifact {} -> deploy status: {}'.format(artifact.name, deployed_str))
 
         launcher.start_all()
 
         launcher.wait_for_start()
 
-        # for instance in launcher.completed_initializations():
-        #     instance_id = launcher.get_instance_id(instance)
+        for instance in launcher.completed_initializations():
+            instance_id = launcher.get_instance_id(instance)
+            id_str = 'started with ID {}'.format(instance_id) if instance_id else 'start failed'
+            print('Instance {} -> start status: {}'.format(instance.name, id_str))
