@@ -8,17 +8,15 @@ RUNTIMES = {
 
 class Artifact(object):
     @staticmethod
-    def from_dict(module: str, data: Dict[Any, Any]):
+    def from_dict(data: Dict[Any, Any]):
         return Artifact(
             name=data["name"],
             runtime=data["runtime"],
-            module=module,
             spec=data.get("spec", None)
         )
 
-    def __init__(self, name: str, runtime: str, module: str, spec: Any) -> None:
+    def __init__(self, name: str, runtime: str, spec: Any) -> None:
         self.name = name
-        self.module = module
         self.runtime = runtime
         self.runtime_id = RUNTIMES[runtime]
         self.spec = spec
@@ -51,7 +49,7 @@ class Configuration:
 
         # Imports configuration parser for each artifact.
         for name, value in data["artifacts"].items():
-            artifact = Artifact.from_dict(name, value)
+            artifact = Artifact.from_dict(value)
             artifact.deadline_height = _get_specific("deadline_height", value, parent=data)
             self.artifacts[str(name)] = artifact
 
