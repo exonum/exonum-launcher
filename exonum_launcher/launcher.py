@@ -223,7 +223,7 @@ def main(args) -> None:
 
         for artifact in launcher.completed_deployments():
             deployed = launcher.check_deployed(artifact)
-            deployed_str = 'succed' if deployed else 'failed'
+            deployed_str = 'succeed' if deployed else 'failed'
             print('Artifact {} -> deploy status: {}'.format(artifact.name, deployed_str))
 
         launcher.start_all()

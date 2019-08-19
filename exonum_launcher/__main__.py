@@ -15,7 +15,7 @@ def run() -> None:
         "-i",
         "--input",
         type=str,
-        help="A path to json input for service initialization",
+        help="A path to yaml input for service initialization",
         required=True,
     )
     parser_run.set_defaults(func=prepare_launcher)
