@@ -162,7 +162,8 @@ class Launcher:
                 if self.check_deployed(artifact):
                     break
                 else:
-                    time.sleep(self.RECONNECT_INTERVAL)
+                    with client.create_subscriber() as subscriber:
+                        subscriber.wait_for_new_block()
 
         self._completed_deployments = self._pending_deployments.keys()
         self._pending_deployments = {}
@@ -189,7 +190,8 @@ class Launcher:
                 if self.get_instance_id(instance):
                     break
                 else:
-                    time.sleep(self.RECONNECT_INTERVAL)
+                    with client.create_subscriber() as subscriber:
+                        subscriber.wait_for_new_block()
 
         self._completed_initializations = self._pending_initializations.keys()
         self._pending_initializations = {}
