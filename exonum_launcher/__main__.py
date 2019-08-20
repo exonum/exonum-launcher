@@ -4,7 +4,7 @@ import os
 
 def run() -> None:
     parser = argparse.ArgumentParser(
-        prog="exonum-service-launcher", description="Exonum service launcher"
+        prog="exonum_launcher", description="Exonum service launcher"
     )
     sub_parser = parser.add_subparsers(
         title="subcommands"
