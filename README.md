@@ -5,7 +5,7 @@ A tool to send deploy&init requests into the Exonum blockchain.
 ## Usage
 
 ```sh
-usage: exonum-service-launcher run [-h] -i INPUT
+usage: python -m exonum_launcher run [-h] -i INPUT
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -48,9 +48,9 @@ cd launcher
 python -m venv launcher_venv
 source launcher_venv/bin/activate
 git clone git@github.com:popzxc/exonum-launcher.git
-python3 -m pip install exonum-launcher
+python3 -m pip install -e exonum-launcher
 
-python -m exonum-launcher run -i input.yaml
+python -m exonum_launcher run -i input.yaml
 ```
 
 ## License
