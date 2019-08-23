@@ -1,4 +1,3 @@
-import codecs
 import time
 import json
 import requests
@@ -29,9 +28,9 @@ class NotCommittedError(Exception):
 
 class Launcher:
     # TODO should it be configurable?
-    ''' Amount of retries to connect to the exonum client. '''
+    """ Amount of retries to connect to the exonum client. """
     RECONNECT_RETRIES = 10
-    ''' Wait interval between connection attempts in seconds. '''
+    """ Wait interval between connection attempts in seconds. """
     RECONNECT_INTERVAL = 0.2
 
     def __init__(self, config):
@@ -39,7 +38,6 @@ class Launcher:
         # TODO check the validity of the networks
         # TODO think of the correctness of the clients management
 
-        network = self.config.networks[0]
         self.clients: List[ExonumClient] = []
 
         for network in self.config.networks:
@@ -82,14 +80,13 @@ class Launcher:
         assert self._supervisor_artifact_name != '', 'Could not find exonum-supervisor in available artifacts'
 
         self.loader.load_service_proto_files(self._supervisor_runtime_id, self._supervisor_artifact_name)
-
         self.service_module = ModuleManager.import_service_module(self._supervisor_artifact_name, 'service')
 
     def deinitialize(self):
         self.loader.deinitialize()
 
     def supervisor_data(self):
-        return (self._supervisor_runtime_id, self._supervisor_artifact_name)
+        return self._supervisor_runtime_id, self._supervisor_artifact_name
 
     def protobuf_loader(self):
         return self.loader
@@ -177,7 +174,10 @@ class Launcher:
             start_request.artifact.name = instance.artifact.name
             start_request.name = instance.name
             start_request.deadline_height = instance.deadline_height
-            # start_request.config = ???
+
+            if instance.config:
+                config = self.get_service_config(instance)
+                start_request.config.Pack(config)
 
             self._pending_initializations[instance] = self._post_to_supervisor('start-service', start_request)
 
@@ -213,6 +213,17 @@ class Launcher:
                 return value['id']
 
         return None
+
+    def get_service_config(self, instance):
+        self.loader.load_service_proto_files(instance.artifact.runtime_id, instance.artifact.name)
+        service_module = ModuleManager.import_service_module(instance.artifact.name, "service")
+        config = service_module.Config()
+
+        for key, value in instance.config.items():
+            assert key in config.DESCRIPTOR.fields_by_name.keys()
+            setattr(config, key, value)
+
+        return config
 
 
 def main(args) -> None:
