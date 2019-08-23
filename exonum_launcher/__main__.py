@@ -21,8 +21,10 @@ def run() -> None:
     parser_run.set_defaults(func=prepare_launcher)
 
     args = parser.parse_args()
-
-    args.func(args)
+    if hasattr(args, 'func'):
+        args.func(args)
+    else:
+        parser.print_help()
 
 
 def prepare_launcher(args):
