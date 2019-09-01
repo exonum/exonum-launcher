@@ -215,7 +215,11 @@ class Launcher:
         return None
 
     def get_service_config(self, instance):
-        self.loader.load_service_proto_files(instance.artifact.runtime_id, instance.artifact.name)
+        try:
+            self.loader.load_service_proto_files(instance.artifact.runtime_id, instance.artifact.name)
+        except Exception as e:
+            print("Couldn't get a proto description for artifact: {}, error: {}".format(instance.artifact.name, e))
+            exit(1)
         service_module = ModuleManager.import_service_module(instance.artifact.name, "service")
         config = service_module.Config()
 
@@ -231,8 +235,8 @@ def main(args) -> None:
 
     with Launcher(config) as launcher:
         launcher.deploy_all()
-
         launcher.wait_for_deploy()
+        time.sleep(10)  # TODO Temporary workaround. Waiting for proto description being available.
 
         for artifact in launcher.completed_deployments():
             deployed = launcher.check_deployed(artifact)
@@ -240,7 +244,6 @@ def main(args) -> None:
             print('Artifact {} -> deploy status: {}'.format(artifact.name, deployed_str))
 
         launcher.start_all()
-
         launcher.wait_for_start()
 
         for instance in launcher.completed_initializations():
