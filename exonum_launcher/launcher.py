@@ -236,7 +236,7 @@ def main(args) -> None:
     with Launcher(config) as launcher:
         launcher.deploy_all()
         launcher.wait_for_deploy()
-        time.sleep(10)
+        time.sleep(10)  # TODO Temporary workaround. Waiting for proto description being available.
 
         for artifact in launcher.completed_deployments():
             deployed = launcher.check_deployed(artifact)
