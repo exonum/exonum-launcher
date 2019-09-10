@@ -45,12 +45,12 @@ I highly recommend to install this tool in the virtualenv.
 ```sh
 mkdir launcher
 cd launcher
-python -m venv launcher_venv
+python3 -m venv launcher_venv
 source launcher_venv/bin/activate
 git clone git@github.com:popzxc/exonum-launcher.git
 python3 -m pip install -e exonum-launcher
 
-python -m exonum_launcher run -i input.yaml
+python3 -m exonum_launcher run -i input.yaml
 ```
 
 ## License
