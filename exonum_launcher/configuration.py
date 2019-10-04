@@ -21,7 +21,7 @@ class Artifact:
         self.deadline_height = None
 
 
-class Instance(object):
+class Instance:
     """Representation of parsed service instance description."""
 
     def __init__(self, artifact: Artifact, name: str, config: Any) -> None:
