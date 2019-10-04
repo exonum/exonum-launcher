@@ -25,7 +25,7 @@ jobs:
         - pip install black
         - pip install pylint
         - pip install mypy
-        - pip install --no-binary=protobuf protobuf pysodium requests websocket-client-py3
+        - pip install --no-binary=protobuf protobuf pysodium requests websocket-client-py3 PyYAML
         - git clone https://github.com/exonum/exonum-python-client.git
         - pip install -e exonum-python-client
       script:
@@ -34,7 +34,7 @@ jobs:
         - pylint exonum_launcher --max-line-length=120 --disable=fixme,bad-continuation,too-few-public-methods; exit $(($? & 3))
     - name: tests
       install:
-        - pip install --no-binary=protobuf protobuf pysodium requests websocket-client-py3
+        - pip install --no-binary=protobuf protobuf pysodium requests websocket-client-py3 PyYAML
         - git clone https://github.com/exonum/exonum-python-client.git
         - pip install -e exonum-python-client
       script: python -m unittest
