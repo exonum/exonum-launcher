@@ -1,5 +1,8 @@
 # Exonum Dynamic Service Launcher
 
+**Status:**
+[![Travis Build Status](https://travis-ci.org/popzxc/exonum-launcher.svg?branch=master)](https://travis-ci.org/popzxc/exonum-launcher)
+
 A tool to send deploy&init requests into the Exonum blockchain.
 
 ## Usage
