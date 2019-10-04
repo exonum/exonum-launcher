@@ -1,0 +1,40 @@
+language: python
+
+python:
+  - "3.7"
+
+matrix:
+  fast_finish: true
+
+sudo: false
+dist: bionic
+
+addons:
+  apt:
+    sources:
+      - sourceline: 'ppa:maarten-fonville/protobuf'
+    packages:
+      - libsodium-dev
+      - libprotobuf-dev
+      - protobuf-compiler
+
+jobs:
+  include:
+    - name: lints
+      install:
+        - pip install black
+        - pip install pylint
+        - pip install mypy
+        - pip install --no-binary=protobuf protobuf pysodium requests websocket-client-py3
+        - git clone git@github.com:exonum/exonum-python-client.git
+        - pip install -e exonum-python-client
+      script:
+        - black --check -l 120 . --exclude=".*_pb2.py"
+        - mypy --ignore-missing-imports --disallow-untyped-defs ./exonum_launcher
+        - pylint exonum_launcher --max-line-length=120 --disable=fixme,bad-continuation,too-few-public-methods; exit $(($? & 3))
+    - name: tests
+      install:
+        - pip install --no-binary=protobuf protobuf pysodium requests websocket-client-py3
+        - git clone git@github.com:exonum/exonum-python-client.git
+        - pip install -e exonum-python-client
+      script: python -m unittest

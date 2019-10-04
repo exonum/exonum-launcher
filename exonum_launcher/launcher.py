@@ -30,6 +30,8 @@ class NotCommittedError(Exception):
     """Error raised when sent transaction was not committed."""
 
 
+# TODO resolve it.
+# pylint: disable=too-many-instance-attributes
 class Launcher:
     """Launcher class provides an interface to deploy and initialize
     services in Exonum blockchain."""
@@ -232,9 +234,9 @@ class Launcher:
             for _ in range(self.RECONNECT_RETRIES):
                 if self.get_instance_id(instance):
                     break
-                else:
-                    with self.clients[0].create_subscriber() as subscriber:
-                        subscriber.wait_for_new_block()
+
+                with self.clients[0].create_subscriber() as subscriber:
+                    subscriber.wait_for_new_block()
 
         self._completed_initializations = list(self._pending_initializations.keys())
         self._pending_initializations = {}
@@ -305,4 +307,3 @@ def main(args: Any) -> None:
             instance_id = launcher.get_instance_id(instance)
             id_str = "started with ID {}".format(instance_id) if instance_id else "start failed"
             print("Instance {} -> start status: {}".format(instance.name, id_str))
-
