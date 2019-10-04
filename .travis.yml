@@ -26,7 +26,7 @@ jobs:
         - pip install pylint
         - pip install mypy
         - pip install --no-binary=protobuf protobuf pysodium requests websocket-client-py3
-        - git clone git@github.com:exonum/exonum-python-client.git
+        - git clone https://github.com/exonum/exonum-python-client.git
         - pip install -e exonum-python-client
       script:
         - black --check -l 120 . --exclude=".*_pb2.py"
@@ -35,6 +35,6 @@ jobs:
     - name: tests
       install:
         - pip install --no-binary=protobuf protobuf pysodium requests websocket-client-py3
-        - git clone git@github.com:exonum/exonum-python-client.git
+        - git clone https://github.com/exonum/exonum-python-client.git
         - pip install -e exonum-python-client
       script: python -m unittest
