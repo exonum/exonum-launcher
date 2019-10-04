@@ -4,10 +4,10 @@ networks:
     public-api-port: 8080
     private-api-port: 8081
     
-  # - host: "127.0.0.1"
-  #   ssl: false
-  #   public-api-port: 8080
-  #   private-api-port: 8081
+  - host: "8.8.8.8"
+    ssl: false
+    public-api-port: 8080
+    private-api-port: 8081
 
 deadline_height: 10000
 
