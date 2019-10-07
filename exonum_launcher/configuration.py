@@ -2,7 +2,7 @@
 from typing import Any, Dict, List
 import yaml
 
-RUNTIMES = {"rust": 0}
+RUNTIMES = {"rust": 0, "python": 2}
 
 
 class Artifact:
@@ -11,7 +11,7 @@ class Artifact:
     @staticmethod
     def from_dict(data: Dict[Any, Any]) -> "Artifact":
         """Parses an `Artifact` entity from provided dict."""
-        return Artifact(name=data["name"], runtime=data["runtime"], spec=data.get("spec", None))
+        return Artifact(name=data["name"], runtime=data["runtime"], spec=data.get("spec", dict()))
 
     def __init__(self, name: str, runtime: str, spec: Any) -> None:
         self.name = name
