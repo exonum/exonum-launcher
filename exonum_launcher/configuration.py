@@ -42,6 +42,19 @@ class Configuration:
     """Parsed configuration of services to deploy&init."""
 
     @staticmethod
+    def declare_runtime(runtime: str, runtime_id: int) -> None:
+        """With this method you can declare an additional runtime, for example:
+
+        >>> Configuration.declare_runtime("java", 1)
+
+        Please note that this method should be called before config parsing.
+        """
+        if runtime in RUNTIMES:
+            raise ValueError(f"Runtime {runtime} is already declared (it has id {RUNTIMES[runtime]})")
+
+        RUNTIMES[runtime] = runtime_id
+
+    @staticmethod
     def from_yaml(path: str) -> "Configuration":
         """Parses configuration from YAML file."""
         data = load_yaml(path)
