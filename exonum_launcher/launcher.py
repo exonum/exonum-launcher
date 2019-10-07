@@ -11,8 +11,9 @@ from google.protobuf.message import Message as ProtobufMessage
 from exonum_client import ExonumClient, ModuleManager
 from exonum_client.protobuf_loader import ProtobufLoader
 
-# from .client import SupervisorClient
 from .configuration import Artifact, Configuration, Instance
+from .runtimes import RuntimeSpecLoader, RustSpecLoader
+from .instances import DefaultInstanceSpecLoader, InstanceSpecLoader, InstanceSpecLoadError
 
 
 def _msg_to_hex(msg: ProtobufMessage) -> str:
@@ -64,6 +65,15 @@ class Launcher:
         self._completed_deployments: List[Artifact] = []
         self._completed_initializations: List[Instance] = []
 
+        self._runtime_spec_loaders: Dict[str, RuntimeSpecLoader] = {"rust": RustSpecLoader()}
+
+        if "python" in Configuration.runtimes():
+            from .runtimes.python import PythonSpecLoader
+
+            self._runtime_spec_loaders["python"] = PythonSpecLoader()
+
+        self._instance_spec_loaders: Dict[Artifact, InstanceSpecLoader] = dict()
+
         self._supervisor_runtime_id = 0
         self._supervisor_artifact_name = ""
         self.service_module: Optional[Any] = None
@@ -96,7 +106,7 @@ class Launcher:
                 self._supervisor_artifact_name = artifact["name"]
                 break
 
-        if self._supervisor_artifact_name != "":
+        if self._supervisor_artifact_name == "":
             raise RuntimeError(
                 "Could not find exonum-supervisor in available artifacts."
                 "Please check that exonum node configuration is correct"
@@ -108,6 +118,20 @@ class Launcher:
     def deinitialize(self) -> None:
         """Deinitializes the Launcher by deinitializing the Protobuf Loader."""
         self.loader.deinitialize()
+
+    def add_runtime_spec_loader(self, runtime: str, spec_loader: RuntimeSpecLoader) -> None:
+        """Adds a runtime-specific spec loader to encode runtime artifact spec into bytes."""
+        if runtime in self._runtime_spec_loaders:
+            raise ValueError(f"Spec loader for runtime '{runtime}' is already added")
+
+        self._runtime_spec_loaders[runtime] = spec_loader
+
+    def add_instance_spec_loader(self, artifact: Artifact, spec_loader: InstanceSpecLoader) -> None:
+        """Adds an artifact-specific config spec loader to encode instance configs into bytes."""
+        if artifact in self._instance_spec_loaders:
+            raise ValueError(f"Instance spec loader for artifact '{artifact.name}' is already added")
+
+        self._instance_spec_loaders[artifact] = spec_loader
 
     def supervisor_data(self) -> Tuple[int, str]:
         """Returns a tuple of supervisor instance ID and name."""
@@ -176,14 +200,13 @@ class Launcher:
         if self.service_module is None:
             raise RuntimeError("Launcher is not initialized")
 
-        for _, artifact in self.config.artifacts.items():
+        for artifact in self.config.artifacts.values():
             deploy_request = self.service_module.DeployRequest()
 
-            # TODO add spec to the request.
             deploy_request.artifact.runtime_id = artifact.runtime_id
             deploy_request.artifact.name = artifact.name
             deploy_request.deadline_height = artifact.deadline_height
-            # deploy_request.spec = ???
+            deploy_request.spec = self._runtime_spec_loaders[artifact.runtime].encode_spec(artifact.spec)
 
             self._pending_deployments[artifact] = self._post_to_supervisor("deploy-artifact", deploy_request)
 
@@ -212,15 +235,18 @@ class Launcher:
         for instance in self.config.instances:
             start_request = self.service_module.StartService()
 
-            # TODO add config to the request.
             start_request.artifact.runtime_id = instance.artifact.runtime_id
             start_request.artifact.name = instance.artifact.name
             start_request.name = instance.name
             start_request.deadline_height = instance.deadline_height
 
             if instance.config:
-                config = self.get_service_config(instance)
-                start_request.config.Pack(config)
+                try:
+                    spec_loader = self._instance_spec_loaders.get(instance.artifact, DefaultInstanceSpecLoader())
+                    start_request.config = spec_loader.load_spec(self.loader, instance)
+                except InstanceSpecLoadError as error:
+                    print(f"Error occured during spec loading: {error}")
+                    sys.exit(1)
 
             self._pending_initializations[instance] = self._post_to_supervisor("start-service", start_request)
 
@@ -261,29 +287,6 @@ class Launcher:
                 return value["id"]
 
         return None
-
-    def get_service_config(self, instance: Instance) -> ProtobufMessage:
-        """Loads the artifact proto files for provided instance,
-        gets Config message and fills it.
-        Returns a filled Protobuf Message object."""
-
-        try:
-            self.loader.load_service_proto_files(instance.artifact.runtime_id, instance.artifact.name)
-            service_module = ModuleManager.import_service_module(instance.artifact.name, "service")
-
-        # We're catchin all the exceptions to shutdown gracefully just in case.
-        # pylint: disable=broad-except
-        except Exception as error:
-            print("Couldn't get a proto description for artifact: {}, error: {}".format(instance.artifact.name, error))
-            sys.exit(1)
-
-        config = service_module.Config()
-
-        for key, value in instance.config.items():
-            assert key in config.DESCRIPTOR.fields_by_name.keys()
-            setattr(config, key, value)
-
-        return config
 
 
 def main(args: Any) -> None:

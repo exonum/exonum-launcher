@@ -23,7 +23,7 @@ class TestConfiguration(unittest.TestCase):
         self.assertEqual(cryptocurrency.runtime, "rust")
         self.assertEqual(cryptocurrency.runtime_id, 0)
         self.assertEqual(cryptocurrency.deadline_height, 10000)
-        self.assertIsNone(cryptocurrency.spec)
+        self.assertEqual(cryptocurrency.spec, {})
 
         self.assertEqual(len(config.instances), 2)
 

@@ -11,7 +11,7 @@ class Artifact:
     @staticmethod
     def from_dict(data: Dict[Any, Any]) -> "Artifact":
         """Parses an `Artifact` entity from provided dict."""
-        return Artifact(name=data["name"], runtime=data["runtime"], spec=data.get("spec", None))
+        return Artifact(name=data["name"], runtime=data["runtime"], spec=data.get("spec", dict()))
 
     def __init__(self, name: str, runtime: str, spec: Any) -> None:
         self.name = name
@@ -40,6 +40,24 @@ def _get_specific(name: Any, value: Dict[Any, Any], parent: Dict[Any, Any]) -> A
 
 class Configuration:
     """Parsed configuration of services to deploy&init."""
+
+    @staticmethod
+    def declare_runtime(runtime: str, runtime_id: int) -> None:
+        """With this method you can declare an additional runtime, for example:
+
+        >>> Configuration.declare_runtime("java", 1)
+
+        Please note that this method should be called before config parsing.
+        """
+        if runtime in RUNTIMES:
+            raise ValueError(f"Runtime {runtime} is already declared (it has id {RUNTIMES[runtime]})")
+
+        RUNTIMES[runtime] = runtime_id
+
+    @staticmethod
+    def runtimes() -> Dict[str, int]:
+        """Returns a list of added runtimes."""
+        return RUNTIMES
 
     @staticmethod
     def from_yaml(path: str) -> "Configuration":
