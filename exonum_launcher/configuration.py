@@ -2,7 +2,7 @@
 from typing import Any, Dict, List
 import yaml
 
-RUNTIMES = {"rust": 0, "python": 2}
+RUNTIMES = {"rust": 0}
 
 
 class Artifact:
@@ -53,6 +53,11 @@ class Configuration:
             raise ValueError(f"Runtime {runtime} is already declared (it has id {RUNTIMES[runtime]})")
 
         RUNTIMES[runtime] = runtime_id
+
+    @staticmethod
+    def runtimes() -> Dict[str, int]:
+        """Returns a list of added runtimes."""
+        return RUNTIMES
 
     @staticmethod
     def from_yaml(path: str) -> "Configuration":

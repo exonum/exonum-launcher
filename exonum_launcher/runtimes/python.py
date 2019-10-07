@@ -1,4 +1,12 @@
-"""Artifact spec encoder for Python runtime"""
+"""Artifact spec encoder for Python runtime.
+
+To get it working, you should first compile `.proto` files:
+
+```sh
+cd exonum_launcher/runtimes/proto
+protoc --proto_path=. --python_out=. python.proto
+```
+"""
 
 from typing import Dict, Any
 

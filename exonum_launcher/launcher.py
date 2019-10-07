@@ -12,7 +12,7 @@ from exonum_client import ExonumClient, ModuleManager
 from exonum_client.protobuf_loader import ProtobufLoader
 
 from .configuration import Artifact, Configuration, Instance
-from .runtimes import RuntimeSpecLoader, RustSpecLoader, PythonSpecLoader
+from .runtimes import RuntimeSpecLoader, RustSpecLoader
 from .instances import DefaultInstanceSpecLoader, InstanceSpecLoader, InstanceSpecLoadError
 
 
@@ -65,7 +65,13 @@ class Launcher:
         self._completed_deployments: List[Artifact] = []
         self._completed_initializations: List[Instance] = []
 
-        self._runtime_spec_loaders = {"rust": RustSpecLoader(), "python": PythonSpecLoader()}
+        self._runtime_spec_loaders: Dict[str, RuntimeSpecLoader] = {"rust": RustSpecLoader()}
+
+        if "python" in Configuration.runtimes():
+            from .runtimes.python import PythonSpecLoader
+
+            self._runtime_spec_loaders["python"] = PythonSpecLoader()
+
         self._instance_spec_loaders: Dict[Artifact, InstanceSpecLoader] = dict()
 
         self._supervisor_runtime_id = 0
