@@ -241,8 +241,12 @@ class Launcher:
             start_request.deadline_height = instance.deadline_height
 
             if instance.config:
-                spec_loader = self._instance_spec_loaders.get(instance.artifact, DefaultInstanceSpecLoader())
-                start_request.config = spec_loader.load_spec(self.loader, instance)
+                try:
+                    spec_loader = self._instance_spec_loaders.get(instance.artifact, DefaultInstanceSpecLoader())
+                    start_request.config = spec_loader.load_spec(self.loader, instance)
+                except InstanceSpecLoadError as error:
+                    print(f"Error occured during spec loading: {error}")
+                    sys.exit(1)
 
             self._pending_initializations[instance] = self._post_to_supervisor("start-service", start_request)
 
