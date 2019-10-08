@@ -8,12 +8,41 @@ A tool to send deploy&init requests into the Exonum blockchain.
 ## Usage
 
 ```sh
-usage: python -m exonum_launcher run [-h] -i INPUT
+usage: exonum_launcher [-h] -i INPUT [-r RUNTIMES [RUNTIMES ...]]
+                       [--runtime-parsers RUNTIME_PARSERS [RUNTIME_PARSERS ...]]
+                       [--instance-parsers INSTANCE_PARSERS [INSTANCE_PARSERS ...]]
+
+Exonum service launcher
 
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT, --input INPUT
                         A path to yaml input for service initialization
+  -r RUNTIMES [RUNTIMES ...], --runtimes RUNTIMES [RUNTIMES ...]
+                        Additional runtimes, e.g. `--runtimes java=1 python=2
+                        wasm=3`
+  --runtime-parsers RUNTIME_PARSERS [RUNTIME_PARSERS ...]
+                        Runtime spec parsers, e.g. `--runtime-parsers
+                        python=your_module.YourRuntimeSpecLoader` Values will
+                        be imported and treated like SpecLoader, so ensure
+                        that module with loader is in `sys.path`.
+  --instance-parsers INSTANCE_PARSERS [INSTANCE_PARSERS ...]
+                        Instance spec parsers, e.g. `--runtime-parsers
+                        python=your_module.YourInstanceSpecLoader` Values will
+                        be imported and treated like InstanceSpecLoader, so
+                        ensure that module with loader is in `sys.path`.
+```
+
+So, if you want to run `exonum-launcher` with Rust runtime only and without custom artifact spec loaders, you can just use:
+
+```sh
+python3 -m exonum_launcher -i sample.yml
+```
+
+If you want to use `exonum-launcher` with Python runtime and Python runtime spec loader, the command will be:
+
+```sh
+python3 -m exonum_launcher --runtimes python=2 --runtime-parsers python=exonum_launcher.runtimes.python.PythonSpecLoader -i sample.yml
 ```
 
 Example of expected `yaml` file:
