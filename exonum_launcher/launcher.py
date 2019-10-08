@@ -296,9 +296,9 @@ def run_launcher(
     instance_spec_loaders: Dict[str, InstanceSpecLoader],
 ) -> Dict[str, Any]:
     """Runs the launcher.
-    
+
     Returns the dict with two entries:
-    
+
     "artifacts" - contain a mapping `Artifact` => `bool denoting if artifact is deploted`
     "instances" - contain a mapping `Instance` => `Optional[InstanceId]`.
     """
