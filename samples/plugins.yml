@@ -1,0 +1,31 @@
+networks:
+  - host: "127.0.0.1"
+    ssl: false
+    public-api-port: 8080
+    private-api-port: 8081
+
+runtimes:
+  python: 2
+
+plugins:
+  runtime:
+    python: "exonum_launcher.runtimes.python.PythonSpecLoader"
+  artifact: {}
+
+deadline_height: 20000
+
+artifacts:
+  cryptocurrency:
+    runtime: python
+    name: "cryptocurrency"
+    spec:
+      source_wheel_name: "exonum-python-cryptocurrency-0.1.0.tar.gz"
+      service_library_name: "cryptocurrency"
+      service_class_name: "Cryptocurrency"
+      hash: "720fa5f8764998c8c1ae59ac83332aa931c9c53fbac5373d34118427fe5ef47e"
+  
+instances:
+  xnm-token:
+    artifact: cryptocurrency
+  nnm-token:
+    artifact: cryptocurrency

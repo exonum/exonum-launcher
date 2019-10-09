@@ -20,29 +20,10 @@ function prepare_launcher {
     echo "Exonum launcher env prepared"
 }
 
-function compile_proto {
-    python3 -m exonum-launcher \
-        compile \
-        -e $EXONUM_DIR \
-        -s $1 \
-        -o proto
-}
-
-function compile_protos {
-    compile_proto cryptocurrency:$EXONUM_DIR/examples/cryptocurrency-advanced/backend/src/proto/
-    compile_proto timestamping:$EXONUM_DIR/examples/timestamping/backend/src/proto/
-    compile_proto time:$EXONUM_DIR/services/time/src/proto/
-}
-
 function run_exonum_config {
     python -m exonum-launcher \
-        run \
-        -i $1 \
-        -p proto
+        -i $1
 }
-
-EXONUM_DIR=${VARIABLE:=../../exonum}
-EXONUM_DIR=$(abspath $EXONUM_DIR)
 
 TARGET_DIR=$(abspath $PWD)/target
 SOURCE_DIR=$(abspath $(dirname $0))
@@ -53,12 +34,10 @@ cd $TARGET_DIR
 prepare_launcher
 case "$1" in
     'timestamping')
-        compile_protos
         echo "Starting timestamping..."
         run_exonum_config $SOURCE_DIR/samples/timestamping.yml
     ;;
     'cryptocurrency')
-        compile_protos
         echo "Starting cryptocurrency..."
         run_exonum_config $SOURCE_DIR/samples/cryptocurrency-advanced.yml
     ;;
