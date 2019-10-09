@@ -66,9 +66,15 @@ class Configuration:
         return Configuration(data)
 
     def __init__(self, data: Dict[Any, Any]) -> None:
+        runtimes = data.get("runtimes")
+        if runtimes is not None:
+            for runtime in runtimes:
+                self.declare_runtime(runtime, runtimes[runtime])
+
         self.networks = data["networks"]
         self.artifacts: Dict[str, Artifact] = dict()
         self.instances: List[Instance] = list()
+        self.plugins: Dict[str, Dict[str, str]] = data.get("plugins", {"runtime": dict(), "artifact": dict()})
 
         # Imports configuration parser for each artifact.
         for name, value in data["artifacts"].items():

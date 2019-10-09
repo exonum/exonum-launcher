@@ -66,13 +66,36 @@ class Launcher:
         self._completed_deployments: List[Artifact] = []
         self._completed_initializations: List[Instance] = []
 
-        self._runtime_spec_loaders: Dict[str, RuntimeSpecLoader] = {"rust": RustSpecLoader()}
-
-        self._instance_spec_loaders: Dict[Artifact, InstanceSpecLoader] = dict()
+        self._runtime_spec_loaders: Dict[str, RuntimeSpecLoader] = self._load_runtime_plugins()
+        self._runtime_spec_loaders["rust"] = RustSpecLoader()  # Rust enabled by default
+        self._instance_spec_loaders: Dict[Artifact, InstanceSpecLoader] = self._load_artifact_plugins()
 
         self._supervisor_runtime_id = 0
         self._supervisor_artifact_name = ""
         self.service_module: Optional[Any] = None
+
+    def _load_runtime_plugins(self) -> Dict[str, RuntimeSpecLoader]:
+        runtime_loaders: Dict[str, RuntimeSpecLoader] = dict()
+        for runtime_name, class_path in self.config.plugins["runtime"].items():
+            try:
+                runtime_loaders[runtime_name] = _import_class(class_path, RuntimeSpecLoader)
+            except (ValueError, ImportError, ModuleNotFoundError, AttributeError) as error:
+                print(f"Could not load runtime parser {class_path}: {error}")
+                sys.exit(1)
+
+        return runtime_loaders
+
+    def _load_artifact_plugins(self) -> Dict[Artifact, InstanceSpecLoader]:
+        instance_loaders: Dict[Artifact, InstanceSpecLoader] = dict()
+        for artifact_name, class_path in self.config.plugins["artifact"].items():
+            try:
+                artifact = self.config.artifacts[artifact_name]
+                instance_loaders[artifact] = _import_class(class_path, InstanceSpecLoader)
+            except (ValueError, KeyError, ImportError, ModuleNotFoundError, AttributeError) as error:
+                print(f"Could not load runtime parser {class_path}: {error}")
+                sys.exit(1)
+
+        return instance_loaders
 
     def __enter__(self) -> "Launcher":
         self.initialize()
@@ -290,11 +313,7 @@ def load_config(path: str) -> Configuration:
     return Configuration.from_yaml(path)
 
 
-def run_launcher(
-    config: Configuration,
-    runtime_spec_loaders: Dict[str, RuntimeSpecLoader],
-    instance_spec_loaders: Dict[str, InstanceSpecLoader],
-) -> Dict[str, Any]:
+def run_launcher(config: Configuration,) -> Dict[str, Any]:
     """Runs the launcher.
 
     Returns the dict with two entries:
@@ -303,12 +322,6 @@ def run_launcher(
     "instances" - contain a mapping `Instance` => `Optional[InstanceId]`.
     """
     with Launcher(config) as launcher:
-        for runtime, runtime_loader in runtime_spec_loaders.items():
-            launcher.add_runtime_spec_loader(runtime, runtime_loader)
-
-        for artifact_name, instance_loader in instance_spec_loaders.items():
-            launcher.add_instance_spec_loader(config.artifacts[artifact_name], instance_loader)
-
         launcher.deploy_all()
         launcher.wait_for_deploy()
         time.sleep(10)  # TODO Temporary workaround. Waiting for proto description being available.
@@ -360,17 +373,13 @@ def main(args: Any) -> None:
     # Load config
     config = load_config(args.input)
 
-    # Load custom spec loaders
-    runtime_loaders: Dict[str, RuntimeSpecLoader] = dict()
-    instance_loaders: Dict[str, InstanceSpecLoader] = dict()
-
+    # Add custom spec loaders to the config.
     if args.runtime_parsers:
         for parser in args.runtime_parsers:
             try:
                 runtime_name, class_path = parser.split("=")
-
-                runtime_loaders[runtime_name] = _import_class(class_path, RuntimeSpecLoader)
-            except (ValueError, ImportError, ModuleNotFoundError, AttributeError) as error:
+                config.plugins["runtime"][runtime_name] = class_path
+            except ValueError as error:
                 print(f"Could not load runtime parser {parser}: {error}")
                 sys.exit(1)
 
@@ -379,10 +388,10 @@ def main(args: Any) -> None:
             try:
                 artifact_name, class_path = parser.split("=")
 
-                instance_loaders[artifact_name] = _import_class(class_path, InstanceSpecLoader)
-            except (ValueError, ImportError, ModuleNotFoundError, AttributeError) as error:
+                config.plugins["runtime"][artifact_name] = class_path
+            except ValueError as error:
                 print(f"Could not load runtime parser {parser}: {error}")
                 sys.exit(1)
 
     # Run the launcher
-    run_launcher(config, runtime_loaders, instance_loaders)
+    run_launcher(config)

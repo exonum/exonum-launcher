@@ -70,6 +70,20 @@ instances:
     config: []
 ```
 
+Also you can define custom runtimes and plugins in the config (so you won't have to provide them from command line):
+
+```yaml
+runtimes:
+  python: 2
+
+plugins:
+  runtime:
+    python: "exonum_launcher.runtimes.python.PythonSpecLoader"
+  artifact: {}
+```
+
+See `samples` folder for more examples.
+
 ## Install
 
 I highly recommend to install this tool in the virtualenv.
