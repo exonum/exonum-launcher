@@ -5,8 +5,6 @@ import json
 from exonum_client import ExonumClient
 from exonum_client.module_manager import ModuleManager
 
-# from exonum_client.protobuf_loader import ProtobufLoader
-
 from .configuration import Artifact, Instance
 from .instances import InstanceSpecLoader
 from .runtimes import RuntimeSpecLoader
@@ -76,6 +74,7 @@ class Supervisor:
         return responses
 
     def create_deploy_request(self, artifact: Artifact, spec_loader: RuntimeSpecLoader) -> bytes:
+        """Creates a deploy request for given artifact."""
         assert self._service_module is not None
         deploy_request = self._service_module.DeployRequest()
 
@@ -87,6 +86,7 @@ class Supervisor:
         return deploy_request.SerializeToString()
 
     def create_start_instance_request(self, instance: Instance, config_loader: InstanceSpecLoader) -> bytes:
+        """Creates a start instance request for given instance."""
         assert self._service_module is not None
         start_request = self._service_module.StartService()
 
@@ -100,7 +100,9 @@ class Supervisor:
         return start_request.SerializeToString()
 
     def send_deploy_request(self, deploy_request: bytes) -> List[str]:
+        """Sends deploy request to the Supervisor."""
         return self._post_to_supervisor("deploy-artifact", deploy_request)
 
     def send_start_instance_request(self, start_request: bytes) -> List[str]:
+        """Sends start instance request to the Supervisor."""
         return self._post_to_supervisor("start-service", start_request)

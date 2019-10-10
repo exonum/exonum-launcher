@@ -1,19 +1,17 @@
 """Main module of the Exonum Launcher."""
-import time
 import importlib
 from typing import Any, List, Dict, Optional
 
 from exonum_client import ExonumClient
 
-from .configuration import Artifact, Configuration, Instance
+from .configuration import Artifact, Configuration
 from .runtimes import RuntimeSpecLoader, RustSpecLoader
 from .instances import DefaultInstanceSpecLoader, InstanceSpecLoader
 from .supervisor import Supervisor
 from .explorer import Explorer
+from .launch_state import LaunchState
 
 
-# TODO resolve it.
-# pylint: disable=too-many-instance-attributes
 class Launcher:
     """Launcher class provides an interface to deploy and initialize
     services in Exonum blockchain."""
@@ -21,34 +19,35 @@ class Launcher:
     def __init__(self, config: Configuration) -> None:
         self.config = config
 
-        # TODO check the validity of the networks
-        # TODO think of the correctness of the clients management
+        self.clients = self._load_clients()
 
-        self.clients: List[ExonumClient] = []
-
-        for network in self.config.networks:
-            client = ExonumClient(
-                network["host"], network["public-api-port"], network["private-api-port"], network["ssl"]
-            )
-            self.clients.append(client)
-
-        self.pending_deployments: Dict[Artifact, List[str]] = {}
-        self.pending_initializations: Dict[Instance, List[str]] = {}
-        self.failed_deployments: List[Artifact] = []
-        self.failed_initializations: List[Instance] = []
-        self.completed_deployments: List[Artifact] = []
-        self.completed_initializations: List[Instance] = []
+        self.launch_state = LaunchState()
 
         # Load runtime plugins and add rust (as default).
-        self._runtime_spec_loaders: Dict[str, RuntimeSpecLoader] = self._load_runtime_plugins()
-        self._runtime_spec_loaders["rust"] = RustSpecLoader()
+        self._runtime_plugins: Dict[str, RuntimeSpecLoader] = self._load_runtime_plugins()
+        self._runtime_plugins["rust"] = RustSpecLoader()
 
         # Load artifact plugins.
-        self._instance_spec_loaders: Dict[Artifact, InstanceSpecLoader] = self._load_artifact_plugins()
+        self._artifact_plugins: Dict[Artifact, InstanceSpecLoader] = self._load_artifact_plugins()
 
         # Create supervsior and explorer.
         self._supervisor = Supervisor(self.clients)
         self._explorer = Explorer(self.clients[0])
+
+    def _load_clients(self) -> List[ExonumClient]:
+        clients: List[ExonumClient] = []
+
+        for network in self.config.networks:
+            # Create a client from network.
+            client = ExonumClient(
+                network["host"], network["public-api-port"], network["private-api-port"], network["ssl"]
+            )
+            # Check that it responses correctly.
+            if client.stats().status_code != 200:
+                raise RuntimeError(f"Client from network {network} seems to be inactive")
+            clients.append(client)
+
+        return clients
 
     def _load_runtime_plugins(self) -> Dict[str, RuntimeSpecLoader]:
         runtime_loaders: Dict[str, RuntimeSpecLoader] = dict()
@@ -89,59 +88,58 @@ class Launcher:
 
     def add_runtime_spec_loader(self, runtime: str, spec_loader: RuntimeSpecLoader) -> None:
         """Adds a runtime-specific spec loader to encode runtime artifact spec into bytes."""
-        if runtime in self._runtime_spec_loaders:
+        if runtime in self._runtime_plugins:
             raise ValueError(f"Spec loader for runtime '{runtime}' is already added")
 
-        self._runtime_spec_loaders[runtime] = spec_loader
+        self._runtime_plugins[runtime] = spec_loader
 
     def add_instance_spec_loader(self, artifact: Artifact, spec_loader: InstanceSpecLoader) -> None:
         """Adds an artifact-specific config spec loader to encode instance configs into bytes."""
-        if artifact in self._instance_spec_loaders:
+        if artifact in self._artifact_plugins:
             raise ValueError(f"Instance spec loader for artifact '{artifact.name}' is already added")
 
-        self._instance_spec_loaders[artifact] = spec_loader
+        self._artifact_plugins[artifact] = spec_loader
 
     def deploy_all(self) -> None:
         """Deploys all the services from the provided config."""
         for artifact in self.config.artifacts.values():
-            spec_loader = self._runtime_spec_loaders[artifact.runtime]
+            spec_loader = self._runtime_plugins[artifact.runtime]
             deploy_request = self._supervisor.create_deploy_request(artifact, spec_loader)
 
-            self.pending_deployments[artifact] = self._supervisor.send_deploy_request(deploy_request)
+            txs = self._supervisor.send_deploy_request(deploy_request)
+
+            self.launch_state.add_pending_deploy(artifact, txs)
 
     def wait_for_deploy(self) -> None:
         """Waits for all the deployments to be completed."""
-        for tx_hashes in self.pending_deployments.values():
+        pending_deployments = self.launch_state.pending_deployments()
+        for tx_hashes in pending_deployments.values():
             self._explorer.wait_for_txs(tx_hashes)
 
-        for artifact in self.pending_deployments:
-            # TODO handle return value
-            self._explorer.wait_for_deploy(artifact)
-
-        self.completed_deployments = list(self.pending_deployments.keys())
-        self.pending_deployments = {}
+        for artifact in pending_deployments:
+            result = self._explorer.wait_for_deploy(artifact)
+            self.launch_state.complete_deploy(artifact, result)
 
     def start_all(self) -> None:
         """Starts all the service instances from the provided config."""
 
         for instance in self.config.instances:
-            config_loader = self._instance_spec_loaders.get(instance.artifact, DefaultInstanceSpecLoader())
+            config_loader = self._artifact_plugins.get(instance.artifact, DefaultInstanceSpecLoader())
             start_request = self._supervisor.create_start_instance_request(instance, config_loader)
 
-            self.pending_initializations[instance] = self._supervisor.send_start_instance_request(start_request)
+            txs = self._supervisor.send_start_instance_request(start_request)
+            self.launch_state.add_pending_initialization(instance, txs)
 
     def wait_for_start(self) -> None:
         """Waits for all the initializations to be completed."""
+        pending_initializations = self.launch_state.pending_initializations()
 
-        for tx_hashes in self.pending_deployments.values():
+        for tx_hashes in pending_initializations.values():
             self._explorer.wait_for_txs(tx_hashes)
 
-        for instance in self.pending_initializations:
-            # TODO handle return value
-            self._explorer.wait_for_start(instance)
-
-        self.completed_initializations = list(self.pending_initializations.keys())
-        self.pending_initializations = {}
+        for instance in pending_initializations:
+            result = self._explorer.wait_for_start(instance)
+            self.launch_state.complete_initialization(instance, result)
 
     def explorer(self) -> Explorer:
         """Returns used explorer"""

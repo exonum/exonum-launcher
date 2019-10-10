@@ -1,5 +1,4 @@
 """Main module of the Exonum Launcher."""
-import time
 import sys
 from typing import Any, Dict
 
@@ -25,11 +24,10 @@ def run_launcher(config: Configuration) -> Dict[str, Any]:
 
         launcher.deploy_all()
         launcher.wait_for_deploy()
-        time.sleep(10)  # TODO Temporary workaround. Waiting for proto description being available.
 
         results: Dict[str, Any] = {"artifacts": dict(), "instances": dict()}
 
-        for artifact in launcher.completed_deployments:
+        for artifact in launcher.launch_state.completed_deployments():
             deployed = explorer.check_deployed(artifact)
             results["artifacts"][artifact] = deployed
             deployed_str = "succeed" if deployed else "failed"
@@ -38,7 +36,7 @@ def run_launcher(config: Configuration) -> Dict[str, Any]:
         launcher.start_all()
         launcher.wait_for_start()
 
-        for instance in launcher.completed_initializations:
+        for instance in launcher.launch_state.completed_initializations():
             instance_id = explorer.get_instance_id(instance)
             results["instances"][instance] = instance_id
             id_str = "started with ID {}".format(instance_id) if instance_id else "start failed"

@@ -6,6 +6,7 @@ import time
 from requests.exceptions import ConnectionError as RequestsConnectionError
 from exonum_client import ExonumClient
 
+from .action_result import ActionResult
 from .configuration import Artifact, Instance
 
 
@@ -19,7 +20,7 @@ class Explorer:
     # Amount of retries to connect to the exonum client.
     RECONNECT_RETRIES = 10
     # Wait interval between connection attempts in seconds.
-    RECONNECT_INTERVAL = 0.2
+    RECONNECT_INTERVAL = 0.5
 
     def __init__(self, client: ExonumClient):
         self._client = client
@@ -72,24 +73,27 @@ class Explorer:
         for tx_hash in txs:
             self.wait_for_tx(tx_hash)
 
-    def wait_for_deploy(self, artifact: Artifact) -> bool:
+    def wait_for_deploy(self, artifact: Artifact) -> ActionResult:
         """Waits for all the deployment of artifact to be completed."""
         for _ in range(self.RECONNECT_RETRIES):
             if self.check_deployed(artifact):
-                return True
+                return ActionResult.Success
 
             with self._client.create_subscriber() as subscriber:
+                # TODO Temporary solution because it currently it takes up to 10 seconds to
+                # update dispatcher info.
+                time.sleep(2)
                 subscriber.wait_for_new_block()
 
-        return False
+        return ActionResult.Fail
 
-    def wait_for_start(self, instance: Instance) -> bool:
+    def wait_for_start(self, instance: Instance) -> ActionResult:
         """Waits for all the initializations to be completed."""
         for _ in range(self.RECONNECT_RETRIES):
             if self.get_instance_id(instance):
-                return True
+                return ActionResult.Success
 
             with self._client.create_subscriber() as subscriber:
                 subscriber.wait_for_new_block()
 
-        return False
+        return ActionResult.Fail
