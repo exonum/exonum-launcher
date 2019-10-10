@@ -9,9 +9,9 @@ runtimes:
 
 plugins:
   runtime:
-    sample: ".spec_loaders.TestRuntimeSpecLoader"
+    sample: "tests.spec_loaders.TestRuntimeSpecLoader"
   artifact:
-    cryptocurrency: ".spec_loaders.TestInstanceSpecLoader"
+    cryptocurrency: "tests.spec_loaders.TestInstanceSpecLoader"
 
 deadline_height: 20000
 

@@ -4,6 +4,7 @@ from typing import Any, List, Dict, Optional
 
 from exonum_client import ExonumClient
 
+from .action_result import ActionResult
 from .configuration import Artifact, Configuration
 from .runtimes import RuntimeSpecLoader, RustSpecLoader
 from .instances import DefaultInstanceSpecLoader, InstanceSpecLoader
@@ -38,13 +39,9 @@ class Launcher:
         clients: List[ExonumClient] = []
 
         for network in self.config.networks:
-            # Create a client from network.
             client = ExonumClient(
                 network["host"], network["public-api-port"], network["private-api-port"], network["ssl"]
             )
-            # Check that it responses correctly.
-            if client.stats().status_code != 200:
-                raise RuntimeError(f"Client from network {network} seems to be inactive")
             clients.append(client)
 
         return clients
@@ -79,7 +76,14 @@ class Launcher:
         self.deinitialize()
 
     def initialize(self) -> None:
-        """Initializes the Launcher by initializing the Supervisor."""
+        """Initializes the Launcher by initializing the Supervisor and checking that clients are valid."""
+        for client in self.clients:
+            if client.stats().status_code != 200:
+                network = (
+                    f"{client.schema}://{client.hostname}; ports: {client.public_api_port} / {client.private_api_port}"
+                )
+                raise RuntimeError(f"Client from network {network} doesn't respond to API requests")
+
         self._supervisor.initialize()
 
     def deinitialize(self) -> None:
@@ -122,8 +126,19 @@ class Launcher:
 
     def start_all(self) -> None:
         """Starts all the service instances from the provided config."""
+        completed_deployments = self.launch_state.completed_deployments()
 
         for instance in self.config.instances:
+            if instance.artifact not in completed_deployments:
+                raise RuntimeError(
+                    f"Can't start instance {instance.name}, because artifact {instance.artifact.name} is not deployed"
+                )
+
+            if completed_deployments[instance.artifact] == ActionResult.Fail:
+                # If deploy failed, we should not try to init instance of that artifact.
+                self.launch_state.complete_initialization(instance, ActionResult.Fail)
+                continue
+
             config_loader = self._artifact_plugins.get(instance.artifact, DefaultInstanceSpecLoader())
             start_request = self._supervisor.create_start_instance_request(instance, config_loader)
 

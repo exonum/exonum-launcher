@@ -1,4 +1,4 @@
-"""TODO"""
+"""Module with base class for Instance spec loader plugins."""
 
 import abc
 

@@ -38,7 +38,8 @@ class LaunchState:
     def complete_initialization(self, instance: Instance, result: ActionResult) -> None:
         """Completes the initialization process."""
         self._completed_initializations[instance] = result
-        del self._pending_initializations[instance]
+        if instance in self._pending_initializations:
+            del self._pending_initializations[instance]
 
     def completed_deployments(self) -> Dict[Artifact, ActionResult]:
         """Returns a copy of completed deployments dict."""

@@ -87,8 +87,8 @@ class TestConfiguration(unittest.TestCase):
         config = self.load_config("custom_plugins.yml")
 
         expected_layout = {
-            "runtime": {"sample": ".spec_loaders.TestRuntimeSpecLoader"},
-            "artifact": {"cryptocurrency": ".spec_loaders.TestInstanceSpecLoader"},
+            "runtime": {"sample": "tests.spec_loaders.TestRuntimeSpecLoader"},
+            "artifact": {"cryptocurrency": "tests.spec_loaders.TestInstanceSpecLoader"},
         }
 
         self.assertEqual(config.plugins, expected_layout)
