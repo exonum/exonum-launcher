@@ -1,78 +1,50 @@
 """Main module of the Exonum Launcher."""
-import time
-import json
-import sys
 import importlib
-from typing import Any, List, Dict, Optional, Tuple
+from typing import Any, List, Dict, Optional
 
-import requests
-from requests.exceptions import ConnectionError as RequestsConnectionError
-from google.protobuf.message import Message as ProtobufMessage
+from exonum_client import ExonumClient
 
-from exonum_client import ExonumClient, ModuleManager
-from exonum_client.protobuf_loader import ProtobufLoader
-
-from .configuration import Artifact, Configuration, Instance
+from .action_result import ActionResult
+from .configuration import Artifact, Configuration
 from .runtimes import RuntimeSpecLoader, RustSpecLoader
-from .instances import DefaultInstanceSpecLoader, InstanceSpecLoader, InstanceSpecLoadError
+from .instances import DefaultInstanceSpecLoader, InstanceSpecLoader
+from .supervisor import Supervisor
+from .explorer import Explorer
+from .launch_state import LaunchState
 
 
-def _msg_to_hex(msg: ProtobufMessage) -> str:
-    return msg.SerializeToString().hex()
-
-
-# TODO proper error handling
-def _post_json(url: str, data: Any) -> Any:
-    data = json.dumps(data)
-    response = requests.post(url, data=data, headers={"content-type": "application/json"})
-    return response
-
-
-class NotCommittedError(Exception):
-    """Error raised when sent transaction was not committed."""
-
-
-# TODO resolve it.
-# pylint: disable=too-many-instance-attributes
 class Launcher:
     """Launcher class provides an interface to deploy and initialize
     services in Exonum blockchain."""
 
-    # TODO should it be configurable?
-
-    # Amount of retries to connect to the exonum client.
-    RECONNECT_RETRIES = 10
-    # Wait interval between connection attempts in seconds.
-    RECONNECT_INTERVAL = 0.2
-
     def __init__(self, config: Configuration) -> None:
         self.config = config
 
-        # TODO check the validity of the networks
-        # TODO think of the correctness of the clients management
+        self.clients = self._load_clients()
 
-        self.clients: List[ExonumClient] = []
+        self.launch_state = LaunchState()
+
+        # Load runtime plugins and add rust (as default).
+        self._runtime_plugins: Dict[str, RuntimeSpecLoader] = self._load_runtime_plugins()
+        self._runtime_plugins["rust"] = RustSpecLoader()
+
+        # Load artifact plugins.
+        self._artifact_plugins: Dict[Artifact, InstanceSpecLoader] = self._load_artifact_plugins()
+
+        # Create supervsior and explorer.
+        self._supervisor = Supervisor(self.clients)
+        self._explorer = Explorer(self.clients[0])
+
+    def _load_clients(self) -> List[ExonumClient]:
+        clients: List[ExonumClient] = []
 
         for network in self.config.networks:
             client = ExonumClient(
                 network["host"], network["public-api-port"], network["private-api-port"], network["ssl"]
             )
-            self.clients.append(client)
+            clients.append(client)
 
-        self.loader = self.clients[0].protobuf_loader()
-
-        self._pending_deployments: Dict[Artifact, List[str]] = {}
-        self._pending_initializations: Dict[Instance, List[str]] = {}
-        self._completed_deployments: List[Artifact] = []
-        self._completed_initializations: List[Instance] = []
-
-        self._runtime_spec_loaders: Dict[str, RuntimeSpecLoader] = self._load_runtime_plugins()
-        self._runtime_spec_loaders["rust"] = RustSpecLoader()  # Rust enabled by default
-        self._instance_spec_loaders: Dict[Artifact, InstanceSpecLoader] = self._load_artifact_plugins()
-
-        self._supervisor_runtime_id = 0
-        self._supervisor_artifact_name = ""
-        self.service_module: Optional[Any] = None
+        return clients
 
     def _load_runtime_plugins(self) -> Dict[str, RuntimeSpecLoader]:
         runtime_loaders: Dict[str, RuntimeSpecLoader] = dict()
@@ -80,8 +52,7 @@ class Launcher:
             try:
                 runtime_loaders[runtime_name] = _import_class(class_path, RuntimeSpecLoader)
             except (ValueError, ImportError, ModuleNotFoundError, AttributeError) as error:
-                print(f"Could not load runtime parser {class_path}: {error}")
-                sys.exit(1)
+                raise RuntimeError(f"Could not load runtime parser {class_path}: {error}")
 
         return runtime_loaders
 
@@ -92,8 +63,7 @@ class Launcher:
                 artifact = self.config.artifacts[artifact_name]
                 instance_loaders[artifact] = _import_class(class_path, InstanceSpecLoader)
             except (ValueError, KeyError, ImportError, ModuleNotFoundError, AttributeError) as error:
-                print(f"Could not load runtime parser {class_path}: {error}")
-                sys.exit(1)
+                raise RuntimeError(f"Could not load runtime parser {class_path}: {error}")
 
         return instance_loaders
 
@@ -106,244 +76,89 @@ class Launcher:
         self.deinitialize()
 
     def initialize(self) -> None:
-        """Initializes the launcher, doing the following:
+        """Initializes the Launcher by initializing the Supervisor and checking that clients are valid."""
+        for client in self.clients:
+            if client.stats().status_code != 200:
+                network = (
+                    f"{client.schema}://{client.hostname}; ports: {client.public_api_port} / {client.private_api_port}"
+                )
+                raise RuntimeError(f"Client from network {network} doesn't respond to API requests")
 
-        - Initializes protobuf loader;
-        - Finds the ID and the name of the exonum supervisor service instance;
-        - Loading the supervisor proto files;
-        - Importing the supervisor's `service` proto module.
-        """
-        self.loader.initialize()
-
-        self.loader.load_main_proto_files()
-
-        services = self.clients[0].available_services().json()
-
-        for artifact in services["artifacts"]:
-            if artifact["name"].startswith("exonum-supervisor"):
-                self._supervisor_runtime_id = artifact["runtime_id"]
-                self._supervisor_artifact_name = artifact["name"]
-                break
-
-        if self._supervisor_artifact_name == "":
-            raise RuntimeError(
-                "Could not find exonum-supervisor in available artifacts."
-                "Please check that exonum node configuration is correct"
-            )
-
-        self.loader.load_service_proto_files(self._supervisor_runtime_id, self._supervisor_artifact_name)
-        self.service_module = ModuleManager.import_service_module(self._supervisor_artifact_name, "service")
+        self._supervisor.initialize()
 
     def deinitialize(self) -> None:
-        """Deinitializes the Launcher by deinitializing the Protobuf Loader."""
-        self.loader.deinitialize()
+        """Deinitializes the Launcher by deinitializing the Supervisor."""
+        self._supervisor.deinitialize()
 
     def add_runtime_spec_loader(self, runtime: str, spec_loader: RuntimeSpecLoader) -> None:
         """Adds a runtime-specific spec loader to encode runtime artifact spec into bytes."""
-        if runtime in self._runtime_spec_loaders:
+        if runtime in self._runtime_plugins:
             raise ValueError(f"Spec loader for runtime '{runtime}' is already added")
 
-        self._runtime_spec_loaders[runtime] = spec_loader
+        self._runtime_plugins[runtime] = spec_loader
 
     def add_instance_spec_loader(self, artifact: Artifact, spec_loader: InstanceSpecLoader) -> None:
         """Adds an artifact-specific config spec loader to encode instance configs into bytes."""
-        if artifact in self._instance_spec_loaders:
+        if artifact in self._artifact_plugins:
             raise ValueError(f"Instance spec loader for artifact '{artifact.name}' is already added")
 
-        self._instance_spec_loaders[artifact] = spec_loader
-
-    def supervisor_data(self) -> Tuple[int, str]:
-        """Returns a tuple of supervisor instance ID and name."""
-        return self._supervisor_runtime_id, self._supervisor_artifact_name
-
-    def protobuf_loader(self) -> ProtobufLoader:
-        """Returns the ProtobufLoader that is being used by Launcher."""
-        return self.loader
-
-    def exonum_clients(self) -> List[ExonumClient]:
-        """Returns the list of Exonum clients that are being used by Launcher."""
-        return self.clients
-
-    def pending_deployments(self) -> Dict[Artifact, List[str]]:
-        """Returns a mapping `Artifact` => `list of deploy transactions hashes`
-        for ongoing deployments."""
-        return self._pending_deployments
-
-    def pending_initializations(self) -> Dict[Instance, List[str]]:
-        """Returns a mapping `Instance` => `list of init transactions hashes
-        for ongoing initializations."""
-        return self._pending_initializations
-
-    def completed_deployments(self) -> List[Artifact]:
-        """Returns a list of artifacts for which deployment is completed."""
-        return self._completed_deployments
-
-    def completed_initializations(self) -> List[Instance]:
-        """Returns a list of instances for which initialization is completed."""
-        return self._completed_initializations
-
-    def _post_to_supervisor(self, endpoint: str, message: ProtobufMessage, private: bool = True) -> List[str]:
-        responses = []
-        for client in self.clients:
-            supervisor_uri = client.service_endpoint("supervisor", endpoint, private)
-            response = _post_json(supervisor_uri, _msg_to_hex(message))
-            responses.append(response.json())
-
-        return responses
-
-    def _wait_until_txs_are_committed(self, tx_hashes: List[str]) -> None:
-        client = self.clients[0]
-        for idx, tx_hash in enumerate(tx_hashes):
-            success = False
-            for _ in range(self.RECONNECT_RETRIES):
-                try:
-                    info = client.get_tx_info(tx_hash).json()
-                    status = info["type"]
-
-                    if status != "committed":
-                        with client.create_subscriber() as subscriber:
-                            subscriber.wait_for_new_block()
-                    else:
-                        success = True
-                        break
-                except RequestsConnectionError:
-                    # Exonum API server may be rebooting. Wait for it.
-                    time.sleep(self.RECONNECT_INTERVAL)
-                    continue
-
-            if not success:
-                raise NotCommittedError("Tx [{}] was not committed.".format(tx_hash))
+        self._artifact_plugins[artifact] = spec_loader
 
     def deploy_all(self) -> None:
         """Deploys all the services from the provided config."""
-        if self.service_module is None:
-            raise RuntimeError("Launcher is not initialized")
-
         for artifact in self.config.artifacts.values():
-            deploy_request = self.service_module.DeployRequest()
+            spec_loader = self._runtime_plugins[artifact.runtime]
+            deploy_request = self._supervisor.create_deploy_request(artifact, spec_loader)
 
-            deploy_request.artifact.runtime_id = artifact.runtime_id
-            deploy_request.artifact.name = artifact.name
-            deploy_request.deadline_height = artifact.deadline_height
-            deploy_request.spec = self._runtime_spec_loaders[artifact.runtime].encode_spec(artifact.spec)
+            txs = self._supervisor.send_deploy_request(deploy_request)
 
-            self._pending_deployments[artifact] = self._post_to_supervisor("deploy-artifact", deploy_request)
+            self.launch_state.add_pending_deploy(artifact, txs)
 
     def wait_for_deploy(self) -> None:
         """Waits for all the deployments to be completed."""
-        for tx_hashes in self._pending_deployments.values():
-            self._wait_until_txs_are_committed(tx_hashes)
+        pending_deployments = self.launch_state.pending_deployments()
+        for tx_hashes in pending_deployments.values():
+            self._explorer.wait_for_txs(tx_hashes)
 
-        for artifact in self._pending_deployments:
-            for _ in range(self.RECONNECT_RETRIES):
-                if self.check_deployed(artifact):
-                    break
-
-                with self.clients[0].create_subscriber() as subscriber:
-                    subscriber.wait_for_new_block()
-
-        self._completed_deployments = list(self._pending_deployments.keys())
-        self._pending_deployments = {}
+        for artifact in pending_deployments:
+            result = self._explorer.wait_for_deploy(artifact)
+            self.launch_state.complete_deploy(artifact, result)
 
     def start_all(self) -> None:
         """Starts all the service instances from the provided config."""
-
-        if self.service_module is None:
-            raise RuntimeError("Launcher is not initialized")
+        completed_deployments = self.launch_state.completed_deployments()
 
         for instance in self.config.instances:
-            start_request = self.service_module.StartService()
+            if instance.artifact not in completed_deployments:
+                raise RuntimeError(
+                    f"Can't start instance {instance.name}, because artifact {instance.artifact.name} is not deployed"
+                )
 
-            start_request.artifact.runtime_id = instance.artifact.runtime_id
-            start_request.artifact.name = instance.artifact.name
-            start_request.name = instance.name
-            start_request.deadline_height = instance.deadline_height
+            if completed_deployments[instance.artifact] == ActionResult.Fail:
+                # If deploy failed, we should not try to init instance of that artifact.
+                self.launch_state.complete_initialization(instance, ActionResult.Fail)
+                continue
 
-            if instance.config:
-                try:
-                    spec_loader = self._instance_spec_loaders.get(instance.artifact, DefaultInstanceSpecLoader())
-                    start_request.config = spec_loader.load_spec(self.loader, instance)
-                except InstanceSpecLoadError as error:
-                    print(f"Error occured during spec loading: {error}")
-                    sys.exit(1)
+            config_loader = self._artifact_plugins.get(instance.artifact, DefaultInstanceSpecLoader())
+            start_request = self._supervisor.create_start_instance_request(instance, config_loader)
 
-            self._pending_initializations[instance] = self._post_to_supervisor("start-service", start_request)
+            txs = self._supervisor.send_start_instance_request(start_request)
+            self.launch_state.add_pending_initialization(instance, txs)
 
     def wait_for_start(self) -> None:
         """Waits for all the initializations to be completed."""
+        pending_initializations = self.launch_state.pending_initializations()
 
-        for tx_hashes in self._pending_initializations.values():
-            self._wait_until_txs_are_committed(tx_hashes)
+        for tx_hashes in pending_initializations.values():
+            self._explorer.wait_for_txs(tx_hashes)
 
-        for instance in self._pending_initializations:
-            for _ in range(self.RECONNECT_RETRIES):
-                if self.get_instance_id(instance):
-                    break
+        for instance in pending_initializations:
+            result = self._explorer.wait_for_start(instance)
+            self.launch_state.complete_initialization(instance, result)
 
-                with self.clients[0].create_subscriber() as subscriber:
-                    subscriber.wait_for_new_block()
-
-        self._completed_initializations = list(self._pending_initializations.keys())
-        self._pending_initializations = {}
-
-    def check_deployed(self, artifact: Artifact, network_id: int = 0) -> bool:
-        """Returns True if artifact is deployed. Otherwise returns False."""
-        dispatcher_info = self.clients[network_id].available_services().json()
-
-        for value in dispatcher_info["artifacts"]:
-            if value["runtime_id"] == artifact.runtime_id and value["name"] == artifact.name:
-                return True
-
-        return False
-
-    def get_instance_id(self, instance: Instance, network_id: int = 0) -> Optional[str]:
-        """Returns ID if running instance. Is service instance was not found,
-        None is returned."""
-        dispatcher_info = self.clients[network_id].available_services().json()
-
-        for value in dispatcher_info["services"]:
-            if value["name"] == instance.name:
-                return value["id"]
-
-        return None
-
-
-def load_config(path: str) -> Configuration:
-    """Loads configuration from yaml"""
-    return Configuration.from_yaml(path)
-
-
-def run_launcher(config: Configuration,) -> Dict[str, Any]:
-    """Runs the launcher.
-
-    Returns the dict with two entries:
-
-    "artifacts" - contain a mapping `Artifact` => `bool denoting if artifact is deploted`
-    "instances" - contain a mapping `Instance` => `Optional[InstanceId]`.
-    """
-    with Launcher(config) as launcher:
-        launcher.deploy_all()
-        launcher.wait_for_deploy()
-        time.sleep(10)  # TODO Temporary workaround. Waiting for proto description being available.
-
-        results: Dict[str, Any] = {"artifacts": dict(), "instances": dict()}
-
-        for artifact in launcher.completed_deployments():
-            deployed = launcher.check_deployed(artifact)
-            results["artifacts"][artifact] = deployed
-            deployed_str = "succeed" if deployed else "failed"
-            print("Artifact {} -> deploy status: {}".format(artifact.name, deployed_str))
-
-        launcher.start_all()
-        launcher.wait_for_start()
-
-        for instance in launcher.completed_initializations():
-            instance_id = launcher.get_instance_id(instance)
-            results["instances"][instance] = instance_id
-            id_str = "started with ID {}".format(instance_id) if instance_id else "start failed"
-            print("Instance {} -> start status: {}".format(instance.name, id_str))
-
-        return results
+    def explorer(self) -> Explorer:
+        """Returns used explorer"""
+        return self._explorer
 
 
 def _import_class(class_path: str, res_type: Any) -> Any:
@@ -355,43 +170,3 @@ def _import_class(class_path: str, res_type: Any) -> Any:
         raise ValueError(f"Class {spec_loader} is not a subclass of {res_type}")
 
     return spec_loader()
-
-
-def main(args: Any) -> None:
-    """Runs the launcher to deploy and init all the instances from the config."""
-
-    # Declare runtimes
-    if args.runtimes:
-        for runtime in args.runtimes:
-            try:
-                name, runtime_id = runtime.split("=")
-                Configuration.declare_runtime(name, int(runtime_id))
-            except ValueError:
-                print("Runtimes must be provided in format `runtime_name=runtime_id`")
-                sys.exit(1)
-
-    # Load config
-    config = load_config(args.input)
-
-    # Add custom spec loaders to the config.
-    if args.runtime_parsers:
-        for parser in args.runtime_parsers:
-            try:
-                runtime_name, class_path = parser.split("=")
-                config.plugins["runtime"][runtime_name] = class_path
-            except ValueError as error:
-                print(f"Could not load runtime parser {parser}: {error}")
-                sys.exit(1)
-
-    if args.instance_parsers:
-        for parser in args.instance_parsers:
-            try:
-                artifact_name, class_path = parser.split("=")
-
-                config.plugins["runtime"][artifact_name] = class_path
-            except ValueError as error:
-                print(f"Could not load runtime parser {parser}: {error}")
-                sys.exit(1)
-
-    # Run the launcher
-    run_launcher(config)

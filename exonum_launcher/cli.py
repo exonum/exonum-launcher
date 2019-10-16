@@ -1,6 +1,6 @@
 """CLI for exonum launcher"""
 import argparse
-from .launcher import main as launcher_main
+from .main import main as launcher_main
 
 
 def run_cli() -> None:
