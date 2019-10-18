@@ -1,7 +1,7 @@
 # Exonum Dynamic Service Launcher
 
 **Status:**
-[![Travis Build Status](https://travis-ci.org/popzxc/exonum-launcher.svg?branch=master)](https://travis-ci.org/popzxc/exonum-launcher)
+[![Travis Build Status](https://travis-ci.org/exonum/exonum-launcher.svg?branch=master)](https://travis-ci.org/exonum/exonum-launcher)
 
 A tool to send deploy&init requests into the Exonum blockchain.
 
@@ -98,14 +98,14 @@ See `samples` folder for more examples.
 
 ## Install
 
-I highly recommend to install this tool in the virtualenv.
+It is highly recommended to install this tool in the virtualenv.
 
 ```sh
 mkdir launcher
 cd launcher
 python3 -m venv launcher_venv
 source launcher_venv/bin/activate
-git clone git@github.com:popzxc/exonum-launcher.git
+git clone git@github.com:exonum/exonum-launcher.git
 python3 -m pip install -e exonum-launcher
 
 python3 -m exonum_launcher run -i input.yaml
