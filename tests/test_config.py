@@ -58,6 +58,12 @@ class TestConfiguration(unittest.TestCase):
         self.assertEqual(cryptocurrency.runtime_id, 0)
         self.assertEqual(cryptocurrency.deadline_height, 10000)
         self.assertEqual(cryptocurrency.spec, {})
+        self.assertEqual(cryptocurrency.deploy, True)
+
+        self.assertTrue("should_not_be_deployed" in config.artifacts)
+
+        should_not_be_deployed = config.artifacts["should_not_be_deployed"]
+        self.assertEqual(should_not_be_deployed.deploy, False)
 
         self.assertEqual(len(config.instances), 2)
 

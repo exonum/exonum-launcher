@@ -107,6 +107,10 @@ class Launcher:
     def deploy_all(self) -> None:
         """Deploys all the services from the provided config."""
         for artifact in self.config.artifacts.values():
+            if not artifact.deploy:
+                # Skip artifact that we should not deploy
+                continue
+
             spec_loader = self._runtime_plugins[artifact.runtime]
             deploy_request = self._supervisor.create_deploy_request(artifact, spec_loader)
 

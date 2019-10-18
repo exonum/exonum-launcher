@@ -11,14 +11,18 @@ class Artifact:
     @staticmethod
     def from_dict(data: Dict[Any, Any]) -> "Artifact":
         """Parses an `Artifact` entity from provided dict."""
-        return Artifact(name=data["name"], runtime=data["runtime"], spec=data.get("spec", dict()))
+        spec = data.get("spec", dict())
+        # Check whether we need to deploy artifact or not
+        deploy = data.get("deploy", True)
+        return Artifact(name=data["name"], runtime=data["runtime"], spec=spec, deploy=deploy)
 
-    def __init__(self, name: str, runtime: str, spec: Any) -> None:
+    def __init__(self, name: str, runtime: str, spec: Any, deploy: bool) -> None:
         self.name = name
         self.runtime = runtime
         self.runtime_id = RUNTIMES[runtime]
         self.spec = spec
         self.deadline_height = None
+        self.deploy = deploy
 
 
 class Instance:

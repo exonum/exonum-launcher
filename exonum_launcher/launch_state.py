@@ -9,8 +9,8 @@ class LaunchState:
     """State of the deploy&init process."""
 
     def __init__(self) -> None:
-        self._pending_deployments: Dict[Artifact, List[str]] = {}
-        self._pending_initializations: Dict[Instance, List[str]] = {}
+        self._pending_deployments: Dict[Artifact, List[str]] = dict()
+        self._pending_initializations: Dict[Instance, List[str]] = dict()
         self._completed_deployments: Dict[Artifact, ActionResult] = dict()
         self._completed_initializations: Dict[Instance, ActionResult] = dict()
 

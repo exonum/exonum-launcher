@@ -15,6 +15,10 @@ artifacts:
   cryptocurrency:
     runtime: rust
     name: "exonum-cryptocurrency-advanced:0.12.0"
+  should_not_be_deployed:
+    runtime: rust
+    name: "should-not-be-deployed:0.12.0"
+    deploy: false
   
 instances:
   xnm-token:
