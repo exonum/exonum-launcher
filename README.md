@@ -98,21 +98,27 @@ See `samples` folder for more examples.
 
 ## Install
 
+#### Requirements
+
+- [Python3](https://www.python.org/downloads/)
+- [`exonum-python-client`](https://github.com/exonum/exonum-python-client)
+
 It is highly recommended to install this tool in the virtualenv.
 
 ```sh
-mkdir launcher
-cd launcher
+# Create new virtual environment
 python3 -m venv launcher_venv
+
+# Activate it
 source launcher_venv/bin/activate
+
+# Install exonum-launcher
 git clone git@github.com:exonum/exonum-launcher.git
 python3 -m pip install -e exonum-launcher
 
+# Use it
 python3 -m exonum_launcher run -i input.yaml
 ```
-
-Also you need to install [`exonum-python-client`](https://github.com/exonum/exonum-python-client)
-in the same virtualenv.
 
 ## License
 
