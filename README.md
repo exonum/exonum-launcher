@@ -59,7 +59,13 @@ deadline_height: 10000
 artifacts:
   cryptocurrency:
     runtime: rust
-    name: "exonum-cryptocurrency-advanced/0.11.0"
+    name: "exonum-cryptocurrency-advanced:0.12.0"
+  
+  # Example of artifact that should not be deployed
+  example_artifact:
+    runtime: rust
+    name: "exonum-cryptocurrency-advanced:0.12.0"
+    deploy: false
   
 instances:
   xnm-token:
@@ -68,6 +74,12 @@ instances:
   nnm-token:
     artifact: "cryptocurrency"
     config: []
+  some-instance:
+    # Since we will not deploy `example_artifact`, it is assumed that it is already deployed
+    artifact: "example_artifact"
+    config:
+      val_a: "123"
+      val_b: 345
 ```
 
 Also you can define custom runtimes and plugins in the config (so you won't have to provide them from command line):
@@ -99,5 +111,9 @@ python3 -m pip install -e exonum-launcher
 python3 -m exonum_launcher run -i input.yaml
 ```
 
+Also you need to install [`exonum-python-client`](https://github.com/exonum/exonum-python-client)
+in the same virtualenv.
+
 ## License
+
 Apache 2.0 - see [LICENSE](LICENSE) for more information.

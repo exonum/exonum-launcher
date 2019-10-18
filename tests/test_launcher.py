@@ -136,6 +136,10 @@ class TestLauncher(unittest.TestCase):
         create_calls_sequence = []
         send_calls_sequence = []
         for artifact in config.artifacts.values():
+            # Skip artifacts that should not be deployed
+            if not artifact.deploy:
+                continue
+
             create_calls_sequence.append(call(artifact, launcher._runtime_plugins[artifact.runtime]))
             send_calls_sequence.append(call(b"123"))
 
@@ -152,7 +156,10 @@ class TestLauncher(unittest.TestCase):
 
         # Check that results were added to the pending deployments.
         for artifact in config.artifacts.values():
-            self.assertEqual(launcher.launch_state._pending_deployments[artifact], ["123"])
+            if artifact.deploy:
+                self.assertEqual(launcher.launch_state._pending_deployments[artifact], ["123"])
+            else:
+                self.assertTrue(artifact not in launcher.launch_state._pending_deployments)
 
     def test_start_all(self) -> None:
         """Tests that deploy method uses supervisor to deploy all artifacts from config."""
