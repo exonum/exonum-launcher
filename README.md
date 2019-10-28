@@ -82,7 +82,15 @@ instances:
       val_b: 345
 ```
 
-Also you can define custom runtimes and plugins in the config (so you won't have to provide them from command line):
+**Important:** if you have more than one validator in the network, be sure to insert data for **all** validators
+to the config file.
+
+Deploy&init process requires requests to be sent to each validator, so don't expect that transaction broadcast
+mechanism will work here.
+
+## Plugins
+
+You can define custom runtimes and plugins in the config (so you won't have to provide them from command line):
 
 ```yaml
 runtimes:
@@ -98,26 +106,8 @@ See `samples` folder for more examples.
 
 ## Install
 
-#### Requirements
-
-- [Python3](https://www.python.org/downloads/)
-- [`exonum-python-client`](https://github.com/exonum/exonum-python-client)
-
-It is highly recommended to install this tool in the virtualenv.
-
 ```sh
-# Create new virtual environment
-python3 -m venv launcher_venv
-
-# Activate it
-source launcher_venv/bin/activate
-
-# Install exonum-launcher
-git clone git@github.com:exonum/exonum-launcher.git
-python3 -m pip install -e exonum-launcher
-
-# Use it
-python3 -m exonum_launcher run -i input.yaml
+pip install exonum-launcher
 ```
 
 ## License
