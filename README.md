@@ -82,8 +82,8 @@ instances:
       val_b: 345
 ```
 
-**Important:** if you have more than one validator in the network, be sure to insert data for **all** validators
-to the config file.
+**Important:** if you have more than one validator in the network, ensure that connection data
+(`networks` section of the config) is specified for  for **every** validator.
 
 Deploy&init process requires requests to be sent to each validator, so don't expect that transaction broadcast
 mechanism will work here.
