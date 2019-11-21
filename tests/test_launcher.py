@@ -173,10 +173,12 @@ class TestLauncher(unittest.TestCase):
         # Build a list of expected arguements for method calls.
         start_calls_sequence = []
         send_calls_sequence = []
-        for instance in config.instances:
-            spec_loader = launcher._artifact_plugins.get(instance.artifact, MockDefaultInstanceSpecLoader())
-            start_calls_sequence.append(call(instance, spec_loader))
-            send_calls_sequence.append(call(b"123"))
+        spec_loaders = [
+            launcher._artifact_plugins.get(instance.artifact, MockDefaultInstanceSpecLoader())
+            for instance in config.instances
+        ]
+        start_calls_sequence.append(call(config.instances, spec_loaders, config.actual_from))
+        send_calls_sequence.append(call(b"123"))
 
         # Mock methods.
         launcher._supervisor.create_start_instance_request = MagicMock(return_value=b"123")  # type: ignore

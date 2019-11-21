@@ -6,6 +6,8 @@ networks:
 
 deadline_height: 10000
 
+supervisor_mode: "simple"
+
 artifacts:
   time:
     runtime: rust

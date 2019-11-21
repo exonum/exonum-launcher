@@ -10,12 +10,13 @@ networks:
   #   private-api-port: 8081
 
 deadline_height: 10000
+supervisor_mode: "simple"
 
 artifacts:
   cryptocurrency:
     runtime: rust
     name: "exonum-cryptocurrency-advanced:0.12.0"
-  
+
 instances:
   xnm-token:
     artifact: cryptocurrency

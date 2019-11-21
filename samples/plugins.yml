@@ -4,6 +4,8 @@ networks:
     public-api-port: 8080
     private-api-port: 8081
 
+supervisor_mode: "simple"
+
 runtimes:
   python: 2
 
