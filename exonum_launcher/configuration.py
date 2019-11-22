@@ -78,8 +78,10 @@ class Configuration:
         self.networks = data["networks"]
         self.supervisor_mode = data.get("supervisor_mode", "simple")
         if not self.supervisor_mode in SUPERVISOR_MODES:
-            raise ValueError(f"The supervisor mode must be one of these: {SUPERVISOR_MODES}, "
-                             f"but '{self.supervisor_mode}' was given.")
+            raise ValueError(
+                f"The supervisor mode must be one of these: {SUPERVISOR_MODES}, "
+                f"but '{self.supervisor_mode}' was given."
+            )
         self.actual_from = data.get("actual_from", 0)
         self.artifacts: Dict[str, Artifact] = dict()
         self.instances: List[Instance] = list()
@@ -100,6 +102,7 @@ class Configuration:
     def is_simple(self) -> bool:
         """Returns true if in a 'Simple' mode."""
         return self.supervisor_mode == "simple"
+
 
 def load_yaml(path: str) -> Dict[Any, Any]:
     """Loads YAML from file."""

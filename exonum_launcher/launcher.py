@@ -151,8 +151,9 @@ class Launcher:
             self._artifact_plugins.get(instance.artifact, DefaultInstanceSpecLoader())
             for instance in self.config.instances
         ]
-        config_proposal = self._supervisor.create_start_instances_request(self.config.instances, config_loaders,
-                                                                          self.config.actual_from)
+        config_proposal = self._supervisor.create_start_instances_request(
+            self.config.instances, config_loaders, self.config.actual_from
+        )
 
         txs = self._supervisor.send_propose_config_request(config_proposal)
         # TODO: Since only one request is sent for all instances, replace the code below with one initialization.
