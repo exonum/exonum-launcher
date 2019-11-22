@@ -44,6 +44,10 @@ class Launcher:
             )
             clients.append(client)
 
+            # Do not need more than one node in a 'Simple' mode
+            if self.config.is_simple():
+                break
+
         return clients
 
     def _load_runtime_plugins(self) -> Dict[str, RuntimeSpecLoader]:
@@ -143,10 +147,17 @@ class Launcher:
                 self.launch_state.complete_initialization(instance, ActionResult.Fail)
                 continue
 
-            config_loader = self._artifact_plugins.get(instance.artifact, DefaultInstanceSpecLoader())
-            start_request = self._supervisor.create_start_instance_request(instance, config_loader)
+        config_loaders = [
+            self._artifact_plugins.get(instance.artifact, DefaultInstanceSpecLoader())
+            for instance in self.config.instances
+        ]
+        config_proposal = self._supervisor.create_start_instances_request(
+            self.config.instances, config_loaders, self.config.actual_from
+        )
 
-            txs = self._supervisor.send_start_instance_request(start_request)
+        txs = self._supervisor.send_propose_config_request(config_proposal)
+        # TODO: Since only one request is sent for all instances, replace the code below with one initialization.
+        for instance in self.config.instances:
             self.launch_state.add_pending_initialization(instance, txs)
 
     def wait_for_start(self) -> None:

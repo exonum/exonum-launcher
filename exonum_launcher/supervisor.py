@@ -49,7 +49,7 @@ class Supervisor:
                 self._supervisor_artifact_name = artifact["name"]
                 break
 
-        if self._supervisor_artifact_name == "":
+        if not self._supervisor_artifact_name:
             raise RuntimeError(
                 "Could not find exonum-supervisor in available artifacts."
                 "Please check that exonum node configuration is correct"
@@ -85,17 +85,25 @@ class Supervisor:
 
         return deploy_request.SerializeToString()
 
-    def create_start_instance_request(self, instance: Instance, config_loader: InstanceSpecLoader) -> bytes:
-        """Creates a start instance request for given instance."""
+    def create_start_instances_request(
+        self, instances: List[Instance], config_loaders: List[InstanceSpecLoader], actual_from: int
+    ) -> bytes:
+        """Creates a start instance request for given list of instances."""
         assert self._service_module is not None
-        start_request = self._service_module.StartService()
+        start_request = self._service_module.ConfigPropose()
+        start_request.actual_from = actual_from
+        for instance, config_loader in zip(instances, config_loaders):
+            config_change = self._service_module.ConfigChange()
+            start_service = self._service_module.StartService()
 
-        start_request.artifact.runtime_id = instance.artifact.runtime_id
-        start_request.artifact.name = instance.artifact.name
-        start_request.name = instance.name
-        start_request.deadline_height = instance.deadline_height
-        if instance.config:
-            start_request.config = config_loader.load_spec(self._loader, instance)
+            start_service.artifact.runtime_id = instance.artifact.runtime_id
+            start_service.artifact.name = instance.artifact.name
+            start_service.name = instance.name
+            if instance.config:
+                start_service.config = config_loader.load_spec(self._loader, instance)
+
+            config_change.start_service.CopyFrom(start_service)
+            start_request.changes.append(config_change)
 
         return start_request.SerializeToString()
 
@@ -103,6 +111,6 @@ class Supervisor:
         """Sends deploy request to the Supervisor."""
         return self._post_to_supervisor("deploy-artifact", deploy_request)
 
-    def send_start_instance_request(self, start_request: bytes) -> List[str]:
-        """Sends start instance request to the Supervisor."""
-        return self._post_to_supervisor("start-service", start_request)
+    def send_propose_config_request(self, config_proposal: bytes) -> List[str]:
+        """Sends propose config request to the Supervisor."""
+        return self._post_to_supervisor("propose-config", config_proposal)

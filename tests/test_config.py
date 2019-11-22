@@ -50,6 +50,8 @@ class TestConfiguration(unittest.TestCase):
         self.assertEqual(len(config.plugins["runtime"]), 0)
         self.assertEqual(len(config.plugins["artifact"]), 0)
 
+        self.assertEqual(config.supervisor_mode, "decentralized")
+
         self.assertTrue("cryptocurrency" in config.artifacts)
 
         cryptocurrency = config.artifacts["cryptocurrency"]
@@ -72,7 +74,6 @@ class TestConfiguration(unittest.TestCase):
             instance = config.instances[i]
             self.assertEqual(instance.artifact, cryptocurrency)
             self.assertEqual(instance.name, name)
-            self.assertEqual(instance.deadline_height, 10000)
             self.assertIsNone(instance.config)
 
     def test_parse_runtimes(self) -> None:
