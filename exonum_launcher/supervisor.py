@@ -111,6 +111,6 @@ class Supervisor:
         """Sends deploy request to the Supervisor."""
         return self._post_to_supervisor("deploy-artifact", deploy_request)
 
-    def send_propose_config_request(self, start_request: bytes) -> List[str]:
+    def send_propose_config_request(self, config_proposal: bytes) -> List[str]:
         """Sends propose config request to the Supervisor."""
-        return self._post_to_supervisor("propose-config", start_request)
+        return self._post_to_supervisor("propose-config", config_proposal)
