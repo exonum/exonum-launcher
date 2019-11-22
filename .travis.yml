@@ -29,7 +29,7 @@ jobs:
         - git clone https://github.com/exonum/exonum-python-client.git
         - pip install -e exonum-python-client
       script:
-        - black --check -l 120 . --exclude=".*_pb2.py"
+        - black --check -l 120 . --exclude=".*_pb2.py" --exclude="exonum-python-client"
         - mypy --ignore-missing-imports --disallow-untyped-defs ./exonum_launcher
         - pylint exonum_launcher --max-line-length=120 --disable=fixme,bad-continuation,too-few-public-methods; exit $(($? & 3))
     - name: tests
