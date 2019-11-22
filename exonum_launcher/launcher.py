@@ -151,10 +151,11 @@ class Launcher:
             self._artifact_plugins.get(instance.artifact, DefaultInstanceSpecLoader())
             for instance in self.config.instances
         ]
-        start_request = self._supervisor.create_start_instance_request(self.config.instances, config_loaders,
-                                                                       self.config.actual_from)
+        start_request = self._supervisor.create_start_instances_request(self.config.instances, config_loaders,
+                                                                        self.config.actual_from)
 
-        txs = self._supervisor.send_start_instance_request(start_request)
+        txs = self._supervisor.send_propose_config_request(start_request)
+        # TODO: Since only one request is sent for all instances, replace the code below with one initialization.
         for instance in self.config.instances:
             self.launch_state.add_pending_initialization(instance, txs)
 

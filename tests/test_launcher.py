@@ -181,15 +181,15 @@ class TestLauncher(unittest.TestCase):
         send_calls_sequence.append(call(b"123"))
 
         # Mock methods.
-        launcher._supervisor.create_start_instance_request = MagicMock(return_value=b"123")  # type: ignore
-        launcher._supervisor.send_start_instance_request = MagicMock(return_value=["123"])  # type: ignore
+        launcher._supervisor.create_start_instances_request = MagicMock(return_value=b"123")  # type: ignore
+        launcher._supervisor.send_propose_config_request = MagicMock(return_value=["123"])  # type: ignore
 
         # Call start.
         launcher.start_all()
 
         # Check that methods were invoked with the expected arguments and in the expected order.
-        launcher._supervisor.create_start_instance_request.assert_has_calls(start_calls_sequence)  # type: ignore
-        launcher._supervisor.send_start_instance_request.assert_has_calls(send_calls_sequence)  # type: ignore
+        launcher._supervisor.create_start_instances_request.assert_has_calls(start_calls_sequence)  # type: ignore
+        launcher._supervisor.send_propose_config_request.assert_has_calls(send_calls_sequence)  # type: ignore
 
         # Check that results were added to the pending deployments.
         for instance in config.instances:

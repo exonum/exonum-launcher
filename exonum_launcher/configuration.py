@@ -33,7 +33,6 @@ class Instance:
         self.artifact = artifact
         self.name = name
         self.config = config
-        self.deadline_height = None
         self.instance_id = None
 
 
@@ -77,11 +76,11 @@ class Configuration:
                 self.declare_runtime(runtime, runtimes[runtime])
 
         self.networks = data["networks"]
-        self.supervisor_mode = data.get("supervisor_mode") or "simple"
+        self.supervisor_mode = data.get("supervisor_mode", "simple")
         if not self.supervisor_mode in SUPERVISOR_MODES:
             raise ValueError(f"The supervisor mode must be one of these: {SUPERVISOR_MODES}, "
                              f"but '{self.supervisor_mode}' was given.")
-        self.actual_from = data.get("actual_from") or 0
+        self.actual_from = data.get("actual_from", 0)
         self.artifacts: Dict[str, Artifact] = dict()
         self.instances: List[Instance] = list()
         self.plugins: Dict[str, Dict[str, str]] = data.get("plugins", {"runtime": dict(), "artifact": dict()})
@@ -96,10 +95,9 @@ class Configuration:
         for (name, value) in data["instances"].items():
             artifact = self.artifacts[value["artifact"]]
             instance = Instance(artifact, name, value.get("config", None))
-            instance.deadline_height = _get_specific("deadline_height", value, parent=data) or 0
             self.instances += [instance]
 
-    def is_simple(self):
+    def is_simple(self) -> bool:
         """Returns true if in a 'Simple' mode."""
         return self.supervisor_mode == "simple"
 

@@ -85,9 +85,9 @@ class Supervisor:
 
         return deploy_request.SerializeToString()
 
-    def create_start_instance_request(self, instances: List[Instance],
-                                      config_loaders: List[InstanceSpecLoader],
-                                      actual_from: int) -> bytes:
+    def create_start_instances_request(self, instances: List[Instance],
+                                       config_loaders: List[InstanceSpecLoader],
+                                       actual_from: int) -> bytes:
         """Creates a start instance request for given list of instances."""
         assert self._service_module is not None
         start_request = self._service_module.ConfigPropose()
@@ -111,6 +111,6 @@ class Supervisor:
         """Sends deploy request to the Supervisor."""
         return self._post_to_supervisor("deploy-artifact", deploy_request)
 
-    def send_start_instance_request(self, start_request: bytes) -> List[str]:
-        """Sends start instance request to the Supervisor."""
+    def send_propose_config_request(self, start_request: bytes) -> List[str]:
+        """Sends propose config request to the Supervisor."""
         return self._post_to_supervisor("propose-config", start_request)
