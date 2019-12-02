@@ -40,9 +40,10 @@ class Explorer:
         None is returned."""
         dispatcher_info = self._client.available_services().json()
 
-        for value in dispatcher_info["services"]:
-            if value["name"] == instance.name:
-                return int(value["id"])
+        for status in dispatcher_info["services"]:
+            spec = status["spec"]
+            if spec["name"] == instance.name:
+                return int(spec["id"])
 
         return None
 
