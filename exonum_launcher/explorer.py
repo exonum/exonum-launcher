@@ -60,7 +60,7 @@ class Explorer:
                 else:
                     success = True
                     break
-            except RequestsConnectionError:
+            except (RequestsConnectionError, ConnectionRefusedError):
                 # Exonum API server may be rebooting. Wait for it.
                 time.sleep(self.RECONNECT_INTERVAL)
                 continue
