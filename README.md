@@ -107,7 +107,7 @@ See `samples` folder for more examples.
 ## Install
 
 ```sh
-pip install exonum-launcher
+pip install exonum-launcher --no-binary=protobuf
 ```
 
 ## License
