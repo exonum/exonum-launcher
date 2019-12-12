@@ -56,8 +56,8 @@ class Explorer:
                 status = info["type"]
 
                 if status != "committed":
-                    with self._client.create_subscriber() as subscriber:
-                        subscriber.wait_for_new_block()
+                    with self._client.create_subscriber("blocks") as subscriber:
+                        subscriber.wait_for_new_event()
                 else:
                     success = True
                     break
@@ -80,11 +80,11 @@ class Explorer:
             if self.check_deployed(artifact):
                 return ActionResult.Success
 
-            with self._client.create_subscriber() as subscriber:
+            with self._client.create_subscriber("blocks") as subscriber:
                 # TODO Temporary solution because it currently it takes up to 10 seconds to
                 # update dispatcher info.
                 time.sleep(2)
-                subscriber.wait_for_new_block()
+                subscriber.wait_for_new_event()
 
         return ActionResult.Fail
 
@@ -94,7 +94,7 @@ class Explorer:
             if self.get_instance_id(instance):
                 return ActionResult.Success
 
-            with self._client.create_subscriber() as subscriber:
-                subscriber.wait_for_new_block()
+            with self._client.create_subscriber("blocks") as subscriber:
+                subscriber.wait_for_new_event()
 
         return ActionResult.Fail
