@@ -73,6 +73,11 @@ class Supervisor:
 
         return responses
 
+    def _get_configuration_number(self) -> int:
+        response = self._main_client.get_service("supervisor", "configuration-number", True)
+
+        return int(response.json())
+
     def create_deploy_request(self, artifact: Artifact, spec_loader: RuntimeSpecLoader) -> bytes:
         """Creates a deploy request for given artifact."""
         assert self._service_module is not None
@@ -90,8 +95,11 @@ class Supervisor:
     ) -> bytes:
         """Creates a start instance request for given list of instances."""
         assert self._service_module is not None
+        configuration_number = self._get_configuration_number()
+
         start_request = self._service_module.ConfigPropose()
         start_request.actual_from = actual_from
+        start_request.configuration_number = configuration_number
         for instance, config_loader in zip(instances, config_loaders):
             config_change = self._service_module.ConfigChange()
             start_service = self._service_module.StartService()
