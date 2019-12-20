@@ -137,13 +137,13 @@ class Launcher:
         completed_deployments = self.launch_state.completed_deployments()
 
         for instance in self.config.instances:
-            if instance.artifact not in completed_deployments:
-                raise RuntimeError(
-                    f"Can't start instance {instance.name}, because artifact {instance.artifact.name} is not deployed"
-                )
+            # We're not checking that artifact in `completed_deployments`, since
+            # user can run launcher for a previously deployed artifact just to add
+            # a new instance.
 
-            if completed_deployments[instance.artifact] == ActionResult.Fail:
-                # If deploy failed, we should not try to init instance of that artifact.
+            if completed_deployments.get(instance.artifact) == ActionResult.Fail:
+                # However, if we've tried to deploy an artifact and
+                # deploy failed, we should not try to init instance of that artifact.
                 self.launch_state.complete_initialization(instance, ActionResult.Fail)
                 continue
 
