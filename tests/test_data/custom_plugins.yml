@@ -19,6 +19,7 @@ artifacts:
   cryptocurrency:
     runtime: sample
     name: "cryptocurrency"
+    version: "0.0.0"
     spec:
       parameter: "value"
   
