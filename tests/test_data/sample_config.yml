@@ -16,10 +16,12 @@ supervisor_mode: "decentralized"
 artifacts:
   cryptocurrency:
     runtime: rust
-    name: "exonum-cryptocurrency-advanced:0.12.0"
+    name: "exonum-cryptocurrency-advanced"
+    version: "0.12.0"
   should_not_be_deployed:
     runtime: rust
-    name: "should-not-be-deployed:0.12.0"
+    name: "should-not-be-deployed"
+    version: "0.12.0"
     deploy: false
   
 instances:

@@ -20,6 +20,7 @@ artifacts:
   cryptocurrency:
     runtime: python
     name: "cryptocurrency"
+    version: "0.0.0"
     spec:
       source_wheel_name: "exonum-python-cryptocurrency-0.1.0.tar.gz"
       service_library_name: "cryptocurrency"

@@ -19,6 +19,7 @@ class Supervisor:
         self._loader = self._main_client.protobuf_loader()
         self._supervisor_runtime_id: Optional[int] = None
         self._supervisor_artifact_name: Optional[str] = None
+        self._supervisor_artifact_version: Optional[str] = None
         self._service_module: Optional[Any] = None
 
     def __enter__(self) -> "Supervisor":
@@ -47,6 +48,7 @@ class Supervisor:
             if artifact["name"].startswith("exonum-supervisor"):
                 self._supervisor_runtime_id = artifact["runtime_id"]
                 self._supervisor_artifact_name = artifact["name"]
+                self._supervisor_artifact_version = artifact["version"]
                 break
 
         if not self._supervisor_artifact_name:
@@ -55,8 +57,12 @@ class Supervisor:
                 "Please check that exonum node configuration is correct"
             )
 
-        self._loader.load_service_proto_files(self._supervisor_runtime_id, self._supervisor_artifact_name)
-        self._service_module = ModuleManager.import_service_module(self._supervisor_artifact_name, "service")
+        self._loader.load_service_proto_files(
+            self._supervisor_runtime_id, self._supervisor_artifact_name, self._supervisor_artifact_version
+        )
+        self._service_module = ModuleManager.import_service_module(
+            self._supervisor_artifact_name, self._supervisor_artifact_version, "service"
+        )
 
     def deinitialize(self) -> None:
         """Deinitializes the Supervisor by deinitializing the Protobuf Loader."""
@@ -85,6 +91,7 @@ class Supervisor:
 
         deploy_request.artifact.runtime_id = artifact.runtime_id
         deploy_request.artifact.name = artifact.name
+        deploy_request.artifact.version = artifact.version
         deploy_request.deadline_height = artifact.deadline_height
         deploy_request.spec = spec_loader.encode_spec(artifact.spec)
 
@@ -106,6 +113,7 @@ class Supervisor:
 
             start_service.artifact.runtime_id = instance.artifact.runtime_id
             start_service.artifact.name = instance.artifact.name
+            start_service.artifact.version = instance.artifact.version
             start_service.name = instance.name
             if instance.config:
                 start_service.config = config_loader.load_spec(self._loader, instance)
