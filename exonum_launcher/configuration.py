@@ -15,10 +15,12 @@ class Artifact:
         spec = data.get("spec", dict())
         # Check whether we need to deploy artifact or not
         deploy = data.get("deploy", True)
-        return Artifact(name=data["name"], runtime=data["runtime"], spec=spec, deploy=deploy)
+        return Artifact(name=data["name"], version=data["version"], runtime=data["runtime"], spec=spec, deploy=deploy)
 
-    def __init__(self, name: str, runtime: str, spec: Any, deploy: bool) -> None:
+    # pylint: disable=too-many-arguments
+    def __init__(self, name: str, version: str, runtime: str, spec: Any, deploy: bool) -> None:
         self.name = name
+        self.version = version
         self.runtime = runtime
         self.runtime_id = RUNTIMES[runtime]
         self.spec = spec
