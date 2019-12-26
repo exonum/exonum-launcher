@@ -42,7 +42,7 @@ class Supervisor:
 
         self._loader.load_main_proto_files()
 
-        services = self._main_client.available_services().json()
+        services = self._main_client.public_api.available_services().json()
 
         for artifact in services["artifacts"]:
             if artifact["name"].startswith("exonum-supervisor"):
@@ -74,13 +74,17 @@ class Supervisor:
 
         responses = []
         for client in self._clients:
-            response = client.post_service("supervisor", endpoint, data, private)
+            supervisor_api = (
+                client.service_private_api("supervisor") if private else client.service_public_api("supervisor")
+            )
+            response = supervisor_api.post_service(endpoint, data)
             responses.append(response.json())
 
         return responses
 
     def _get_configuration_number(self) -> int:
-        response = self._main_client.get_service("supervisor", "configuration-number", True)
+        supervisor_private_api = self._main_client.service_private_api("supervisor")
+        response = supervisor_private_api.get_service("configuration-number")
 
         return int(response.json())
 

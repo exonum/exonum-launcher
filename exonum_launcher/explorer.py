@@ -27,7 +27,7 @@ class Explorer:
 
     def check_deployed(self, artifact: Artifact) -> bool:
         """Returns True if artifact is deployed. Otherwise returns False."""
-        dispatcher_info = self._client.available_services().json()
+        dispatcher_info = self._client.public_api.available_services().json()
 
         for value in dispatcher_info["artifacts"]:
             if value["runtime_id"] == artifact.runtime_id and value["name"] == artifact.name:
@@ -38,7 +38,7 @@ class Explorer:
     def get_instance_id(self, instance: Instance) -> Optional[int]:
         """Returns ID if running instance. Is service instance was not found,
         None is returned."""
-        dispatcher_info = self._client.available_services().json()
+        dispatcher_info = self._client.public_api.available_services().json()
 
         for status in dispatcher_info["services"]:
             spec = status["spec"]
@@ -52,7 +52,7 @@ class Explorer:
         success = False
         for _ in range(self.RECONNECT_RETRIES):
             try:
-                info = self._client.get_tx_info(tx_hash).json()
+                info = self._client.public_api.get_tx_info(tx_hash).json()
                 status = info["type"]
 
                 if status != "committed":
