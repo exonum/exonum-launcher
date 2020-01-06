@@ -14,6 +14,10 @@ class NotCommittedError(Exception):
     """Error raised when sent transaction was not committed."""
 
 
+class ExecutionFailError(Exception):
+    """Error raised when transaction execution fails."""
+
+
 class Explorer:
     """Interface to interact with the Explorer service."""
 
@@ -53,14 +57,16 @@ class Explorer:
         for _ in range(self.RECONNECT_RETRIES):
             try:
                 info = self._client.public_api.get_tx_info(tx_hash).json()
-                status = info["type"]
+                if info["type"] == "committed":
+                    status = info["status"]
+                    if status["type"] != "success":
+                        raise ExecutionFailError(f"Transaction execution failed: {status}")
 
-                if status != "committed":
-                    with self._client.create_subscriber("blocks") as subscriber:
-                        subscriber.wait_for_new_event()
-                else:
                     success = True
                     break
+
+                with self._client.create_subscriber("blocks") as subscriber:
+                    subscriber.wait_for_new_event()
             except (RequestsConnectionError, ConnectionRefusedError):
                 # Exonum API server may be rebooting. Wait for it.
                 time.sleep(self.RECONNECT_INTERVAL)

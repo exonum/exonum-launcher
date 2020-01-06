@@ -100,3 +100,11 @@ class TestConfiguration(unittest.TestCase):
         }
 
         self.assertEqual(config.plugins, expected_layout)
+
+    def test_parse_consensus(self) -> None:
+        config = self.load_config("consensus.yml")
+
+        self.assertIsNotNone(config.consensus)
+        self.assertEqual(len(config.consensus["validator_keys"]), 1)
+        self.assertEqual(len(config.consensus["validator_keys"][0]), 2)
+        self.assertEqual(config.consensus["first_round_timeout"], 100)

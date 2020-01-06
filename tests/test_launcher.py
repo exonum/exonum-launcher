@@ -177,20 +177,19 @@ class TestLauncher(unittest.TestCase):
             launcher._artifact_plugins.get(instance.artifact, MockDefaultInstanceSpecLoader())
             for instance in config.instances
         ]
-        start_calls_sequence.append(call(config.instances, spec_loaders, config.actual_from))
+        start_calls_sequence.append(call(None, config.instances, spec_loaders, config.actual_from))
         send_calls_sequence.append(call(b"123"))
 
         # Mock methods.
-        launcher._supervisor.create_start_instances_request = MagicMock(return_value=b"123")  # type: ignore
+        launcher._supervisor.create_config_change_request = MagicMock(return_value=b"123")  # type: ignore
         launcher._supervisor.send_propose_config_request = MagicMock(return_value=["123"])  # type: ignore
 
         # Call start.
         launcher.start_all()
 
         # Check that methods were invoked with the expected arguments and in the expected order.
-        launcher._supervisor.create_start_instances_request.assert_has_calls(start_calls_sequence)  # type: ignore
+        launcher._supervisor.create_config_change_request.assert_has_calls(start_calls_sequence)  # type: ignore
         launcher._supervisor.send_propose_config_request.assert_has_calls(send_calls_sequence)  # type: ignore
 
-        # Check that results were added to the pending deployments.
-        for instance in config.instances:
-            self.assertEqual(launcher.launch_state._pending_initializations[instance], ["123"])
+        # Check that results were added to the pending configs.
+        self.assertEqual(launcher.launch_state._pending_configs[launcher.config], ["123"])

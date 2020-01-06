@@ -1,6 +1,8 @@
 """Module capable of parsing config file"""
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 import yaml
+
+from exonum_client.crypto import PublicKey
 
 RUNTIMES = {"rust": 0}
 SUPERVISOR_MODES = ["simple", "decentralized"]
@@ -31,11 +33,15 @@ class Artifact:
 class Instance:
     """Representation of parsed service instance description."""
 
-    def __init__(self, artifact: Artifact, name: str, config: Any) -> None:
+    def __init__(self, artifact: Artifact, name: str, action: str, config: Any) -> None:
+        if action not in ["start", "stop", "config"]:
+            raise RuntimeError(f"Incorrect action '{action}', available actions are: 'start', 'stop', 'config'")
+
         self.artifact = artifact
         self.name = name
         self.config = config
-        self.instance_id = None
+        self.instance_id: Optional[int] = None
+        self.action = action
 
 
 def _get_specific(name: Any, value: Dict[Any, Any], parent: Dict[Any, Any]) -> Any:
@@ -88,6 +94,10 @@ class Configuration:
         self.artifacts: Dict[str, Artifact] = dict()
         self.instances: List[Instance] = list()
         self.plugins: Dict[str, Dict[str, str]] = data.get("plugins", {"runtime": dict(), "artifact": dict()})
+        self.consensus: Any = data.get("consensus", None)
+
+        if self.consensus is not None:
+            self._validate_consensus_config()
 
         # Imports configuration parser for each artifact.
         for name, value in data["artifacts"].items():
@@ -98,8 +108,38 @@ class Configuration:
         # Converts config for each instance into protobuf
         for (name, value) in data["instances"].items():
             artifact = self.artifacts[value["artifact"]]
-            instance = Instance(artifact, name, value.get("config", None))
+            instance = Instance(artifact, name, value.get("action", "start"), value.get("config", None))
             self.instances += [instance]
+
+    def _validate_consensus_config(self) -> None:
+        assert self.consensus is not None
+        expected_fields = [
+            "validator_keys",
+            "first_round_timeout",
+            "status_timeout",
+            "peers_timeout",
+            "txs_block_limit",
+            "max_message_len",
+            "min_propose_timeout",
+            "max_propose_timeout",
+            "propose_timeout_threshold",
+        ]
+
+        for field in expected_fields:
+            if field not in self.consensus:
+                raise RuntimeError(
+                    f"Invalid consensus config '{self.consensus}', at least the field '{field}' is missing."
+                )
+
+        for key_pair in self.consensus["validator_keys"]:
+            if len(key_pair) != 2:
+                raise RuntimeError(
+                    "Validaor keys should be a list of pairs (consensus_key, service_key) in hexadecimal form"
+                )
+
+            # Check that keys can be parsed correctly.
+            _ = PublicKey(bytes.fromhex(key_pair[0]))
+            _ = PublicKey(bytes.fromhex(key_pair[1]))
 
     def is_simple(self) -> bool:
         """Returns true if in a 'Simple' mode."""

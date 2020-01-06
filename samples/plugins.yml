@@ -30,5 +30,7 @@ artifacts:
 instances:
   xnm-token:
     artifact: cryptocurrency
+    action: start
   nnm-token:
     artifact: cryptocurrency
+    action: start

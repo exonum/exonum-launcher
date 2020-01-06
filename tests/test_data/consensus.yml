@@ -1,0 +1,23 @@
+networks:
+  - host: "127.0.0.1"
+    ssl: false
+    public-api-port: 8080
+    private-api-port: 8081
+
+deadline_height: 20000
+
+consensus:
+    validator_keys: 
+      - ["1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a",
+         "2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b"]
+    first_round_timeout: 100
+    status_timeout: 100
+    peers_timeout: 100
+    txs_block_limit: 100
+    max_message_len: 100
+    min_propose_timeout: 100
+    max_propose_timeout: 100
+    propose_timeout_threshold: 100
+
+artifacts: {}
+instances: {}
