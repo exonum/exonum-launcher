@@ -2,7 +2,7 @@
 from typing import Dict, List
 
 from .action_result import ActionResult
-from .configuration import Artifact, Instance, Configuration
+from .configuration import Artifact, Configuration
 
 
 class LaunchState:
