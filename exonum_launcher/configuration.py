@@ -134,7 +134,7 @@ class Configuration:
         for key_pair in self.consensus["validator_keys"]:
             if len(key_pair) != 2:
                 raise RuntimeError(
-                    "Validaor keys should be a list of pairs (consensus_key, service_key) in hexadecimal form"
+                    "Validator keys should be a list of pairs (consensus_key, service_key) in hexadecimal form"
                 )
 
             # Check that keys can be parsed correctly.
