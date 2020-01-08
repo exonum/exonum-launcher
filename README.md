@@ -70,23 +70,50 @@ artifacts:
 instances:
   xnm-token:
     artifact: cryptocurrency
+    action: start
     config: []
   nnm-token:
     artifact: "cryptocurrency"
+    action: start
     config: []
   some-instance:
     # Since we will not deploy `example_artifact`, it is assumed that it is already deployed
     artifact: "example_artifact"
+    action: start
     config:
       val_a: "123"
       val_b: 345
 ```
+
+`action` field can be one of the following:
+
+- `start`: to start a new instance;
+- `config` to change a configuration of existing service (only in `simple` supervisor mode!);
+- `stop` to stop a running service.
 
 **Important:** if you have more than one validator in the network, ensure that connection data
 (`networks` section of the config) is specified for **every** validator.
 
 Deploy&init process requires requests to be sent to each validator, so don't expect that transaction broadcast
 mechanism will work here.
+
+If supervisor works in the `simple` mode, it's also possible to change consensus config
+by providing a `consensus` field in the config, for example:
+
+```yaml
+consensus:
+    validator_keys:
+      - ["1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a",
+         "2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b"]
+    first_round_timeout: 100
+    status_timeout: 100
+    peers_timeout: 100
+    txs_block_limit: 100
+    max_message_len: 100
+    min_propose_timeout: 100
+    max_propose_timeout: 100
+    propose_timeout_threshold: 100
+```
 
 ## Plugins
 

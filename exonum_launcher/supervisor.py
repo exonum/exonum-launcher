@@ -8,12 +8,15 @@ from exonum_client.module_manager import ModuleManager
 from .configuration import Artifact, Instance
 from .instances import InstanceSpecLoader
 from .runtimes import RuntimeSpecLoader
+from .explorer import Explorer
 
 
+# pylint: disable=too-many-instance-attributes
 class Supervisor:
     """Interface to interact with the Supervisor service."""
 
-    def __init__(self, clients: List[ExonumClient]) -> None:
+    def __init__(self, mode: str, clients: List[ExonumClient]) -> None:
+        self._mode = mode
         self._clients = clients
         self._main_client = clients[0]
         self._loader = self._main_client.protobuf_loader()
@@ -126,6 +129,137 @@ class Supervisor:
             start_request.changes.append(config_change)
 
         return start_request.SerializeToString()
+
+    def create_config_change_request(
+        self,
+        consensus: Optional[Any],
+        instances: List[Instance],
+        config_loaders: List[InstanceSpecLoader],
+        actual_from: int,
+    ) -> bytes:
+        """Creates a configuration change request."""
+
+        if self._mode != "simple":
+            raise RuntimeError("Changing configuration for decentralized supervisor is not yet supported")
+
+        assert self._service_module is not None
+        configuration_number = self._get_configuration_number()
+
+        config_change_request = self._service_module.ConfigPropose()
+        config_change_request.actual_from = actual_from
+        config_change_request.configuration_number = configuration_number
+
+        if consensus is not None:
+            config_change = self._service_module.ConfigChange()
+            self._build_consensus_change(consensus, config_change)
+            config_change_request.changes.append(config_change)
+
+        for instance, config_loader in zip(instances, config_loaders):
+            config_change = self._service_module.ConfigChange()
+
+            if instance.action == "start":
+                self._build_start_service_change(instance, config_loader, config_change)
+            elif instance.action == "config":
+                self._build_service_config_change(instance, config_loader, config_change)
+            elif instance.action == "stop":
+                self._build_stop_service_change(instance, config_change)
+            else:
+                raise RuntimeError(f"Unknown action type '{instance.action}' for instance '{instance}'")
+
+            config_change_request.changes.append(config_change)
+
+        return config_change_request.SerializeToString()
+
+    def _build_consensus_change(self, consensus: Any, change: Any) -> None:
+        """Creates a ConfigChange for consensus config."""
+
+        assert self._service_module is not None
+
+        blockchain_module = ModuleManager.import_service_module(
+            self._supervisor_artifact_name, self._supervisor_artifact_version, "blockchain"
+        )
+
+        types_module = ModuleManager.import_service_module(
+            self._supervisor_artifact_name, self._supervisor_artifact_version, "types"
+        )
+
+        new_consensus_config = blockchain_module.Config()
+        for consensus_key, service_key in consensus["validator_keys"]:
+            consensus_key = types_module.PublicKey(data=bytes.fromhex(consensus_key))
+            service_key = types_module.PublicKey(data=bytes.fromhex(service_key))
+
+            validator_keys = blockchain_module.ValidatorKeys()
+            validator_keys.consensus_key.CopyFrom(consensus_key)
+            validator_keys.service_key.CopyFrom(service_key)
+
+            new_consensus_config.validator_keys.append(validator_keys)
+
+        new_consensus_config.first_round_timeout = consensus["first_round_timeout"]
+        new_consensus_config.status_timeout = consensus["status_timeout"]
+        new_consensus_config.peers_timeout = consensus["peers_timeout"]
+        new_consensus_config.txs_block_limit = consensus["txs_block_limit"]
+        new_consensus_config.max_message_len = consensus["max_message_len"]
+        new_consensus_config.min_propose_timeout = consensus["min_propose_timeout"]
+        new_consensus_config.max_propose_timeout = consensus["max_propose_timeout"]
+        new_consensus_config.propose_timeout_threshold = consensus["propose_timeout_threshold"]
+
+        change.consensus.CopyFrom(new_consensus_config)
+
+    def _build_service_config_change(self, instance: Instance, config_loader: InstanceSpecLoader, change: Any) -> None:
+        """Creates a ConfigChange for service config change."""
+
+        assert self._service_module is not None
+        service_config = self._service_module.ServiceConfig()
+
+        if instance.instance_id is None:
+            # Instance ID is currently unknown, retrieve it.
+            explorer = Explorer(self._main_client)
+            instance_id = explorer.get_instance_id(instance)
+
+            if instance_id is None:
+                raise RuntimeError(f"Instance {instance} doesn't seem to be deployed, can't change configuration")
+
+            instance.instance_id = instance_id
+
+        service_config.instance_id = instance.instance_id
+        service_config.params = config_loader.serialize_config(self._loader, instance, instance.config)
+
+        change.service.CopyFrom(service_config)
+
+    def _build_start_service_change(self, instance: Instance, config_loader: InstanceSpecLoader, change: Any) -> None:
+        """Creates a ConfigChange for starting a service."""
+
+        assert self._service_module is not None
+        start_service = self._service_module.StartService()
+
+        start_service.artifact.runtime_id = instance.artifact.runtime_id
+        start_service.artifact.name = instance.artifact.name
+        start_service.artifact.version = instance.artifact.version
+        start_service.name = instance.name
+        if instance.config:
+            start_service.config = config_loader.load_spec(self._loader, instance)
+
+        change.start_service.CopyFrom(start_service)
+
+    def _build_stop_service_change(self, instance: Instance, change: Any) -> None:
+        """Creates a ConfigChange for stopping a service."""
+
+        assert self._service_module is not None
+        stop_service = self._service_module.StopService()
+
+        if instance.instance_id is None:
+            # Instance ID is currently unknown, retrieve it.
+            explorer = Explorer(self._main_client)
+            instance_id = explorer.get_instance_id(instance)
+
+            if instance_id is None:
+                raise RuntimeError(f"Instance {instance} doesn't seem to be deployed, can't change configuration")
+
+            instance.instance_id = instance_id
+
+        stop_service.instance_id = instance.instance_id
+
+        change.stop_service.CopyFrom(stop_service)
 
     def send_deploy_request(self, deploy_request: bytes) -> List[str]:
         """Sends deploy request to the Supervisor."""

@@ -1,6 +1,8 @@
 """Default spec loader which will be attempted to be used in case
 if concrete loader was not provided for artifact."""
 
+from typing import Any
+
 from exonum_client.protobuf_loader import ProtobufLoader
 from exonum_client.module_manager import ModuleManager
 from exonum_client.proofs.encoder import build_encoder_function
@@ -13,9 +15,14 @@ from .instance_spec_loader import InstanceSpecLoader, InstanceSpecLoadError
 class DefaultInstanceSpecLoader(InstanceSpecLoader):
     """Default spec loader.
     It attempts to load artifact proto files and recursively merge
-    Config message from provided instance config dict."""
+    Config message from provided instance config dict.
+
+    For changing service configuration, Config message is attempted to be used as well"""
 
     def load_spec(self, loader: ProtobufLoader, instance: Instance) -> bytes:
+        return self.serialize_config(loader, instance, instance.config)
+
+    def serialize_config(self, loader: ProtobufLoader, instance: Instance, config: Any) -> bytes:
         try:
             try:
                 # Try to load module (if it's already compiled) first.
@@ -34,7 +41,7 @@ class DefaultInstanceSpecLoader(InstanceSpecLoader):
             # `build_encoder_function` will create a recursive binary serializer for the
             # provided message type. In our case we want to serialize `Config`.
             config_encoder = build_encoder_function(config_class)
-            result = config_encoder(instance.config)
+            result = config_encoder(config)
 
         # We're catching all the exceptions to shutdown gracefully (on the caller side) just in case.
         # pylint: disable=broad-except

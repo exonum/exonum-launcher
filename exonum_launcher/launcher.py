@@ -32,7 +32,7 @@ class Launcher:
         self._artifact_plugins: Dict[Artifact, InstanceSpecLoader] = self._load_artifact_plugins()
 
         # Create supervsior and explorer.
-        self._supervisor = Supervisor(self.clients)
+        self._supervisor = Supervisor(self.config.supervisor_mode, self.clients)
         self._explorer = Explorer(self.clients[0])
 
     def _load_clients(self) -> List[ExonumClient]:
@@ -134,42 +134,34 @@ class Launcher:
 
     def start_all(self) -> None:
         """Starts all the service instances from the provided config."""
-        completed_deployments = self.launch_state.completed_deployments()
-
-        for instance in self.config.instances:
-            # We're not checking that artifact in `completed_deployments`, since
-            # user can run launcher for a previously deployed artifact just to add
-            # a new instance.
-
-            if completed_deployments.get(instance.artifact) == ActionResult.Fail:
-                # However, if we've tried to deploy an artifact and
-                # deploy failed, we should not try to init instance of that artifact.
-                self.launch_state.complete_initialization(instance, ActionResult.Fail)
-                continue
-
         config_loaders = [
             self._artifact_plugins.get(instance.artifact, DefaultInstanceSpecLoader())
             for instance in self.config.instances
         ]
-        config_proposal = self._supervisor.create_start_instances_request(
-            self.config.instances, config_loaders, self.config.actual_from
+        config_proposal = self._supervisor.create_config_change_request(
+            self.config.consensus, self.config.instances, config_loaders, self.config.actual_from
         )
 
         txs = self._supervisor.send_propose_config_request(config_proposal)
-        # TODO: Since only one request is sent for all instances, replace the code below with one initialization.
-        for instance in self.config.instances:
-            self.launch_state.add_pending_initialization(instance, txs)
+        self.launch_state.add_pending_config(self.config, txs)
 
     def wait_for_start(self) -> None:
         """Waits for all the initializations to be completed."""
-        pending_initializations = self.launch_state.pending_initializations()
+        tx_hashes = self.launch_state.pending_configs()[self.config]
 
-        for tx_hashes in pending_initializations.values():
-            self._explorer.wait_for_txs(tx_hashes)
+        self._explorer.wait_for_txs(tx_hashes)
 
-        for instance in pending_initializations:
+        result = ActionResult.Success
+        for instance in self.config.instances:
+            if instance.action != "start":
+                continue
+
             result = self._explorer.wait_for_start(instance)
-            self.launch_state.complete_initialization(instance, result)
+            if result == ActionResult.Fail:
+                # Since we're sending only one transaction, one fail means fail for everything
+                break
+
+        self.launch_state.complete_config(self.config, result)
 
     def explorer(self) -> Explorer:
         """Returns used explorer"""
