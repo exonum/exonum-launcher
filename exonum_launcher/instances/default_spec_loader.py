@@ -31,7 +31,9 @@ class DefaultInstanceSpecLoader(InstanceSpecLoader):
                 )
             except (ModuleNotFoundError, ImportError):
                 # If it's not compiled, load & compile protobuf.
-                loader.load_service_proto_files(instance.artifact.runtime_id, instance.artifact.name)
+                loader.load_service_proto_files(
+                    instance.artifact.runtime_id, instance.artifact.name, instance.artifact.version
+                )
                 service_module = ModuleManager.import_service_module(
                     instance.artifact.name, instance.artifact.version, "service"
                 )
