@@ -21,20 +21,20 @@ addons:
 jobs:
   include:
     - name: lints
-      install:
-        - pip install black
-        - pip install pylint
-        - pip install mypy
-        - pip install --no-binary=protobuf protobuf pysodium requests websocket-client-py3 PyYAML
-        - git clone https://github.com/exonum/exonum-python-client.git
-        - pip install -e exonum-python-client
-      script:
-        - black --check -l 120 . --exclude=".*_pb2.py" --exclude="exonum-python-client"
-        - mypy --ignore-missing-imports --disallow-untyped-defs ./exonum_launcher
-        - pylint exonum_launcher --max-line-length=120 --disable=fixme,bad-continuation,too-few-public-methods,duplicate-code
+        install:
+          - pip install black
+          - pip install pylint
+          - pip install mypy
+          - pip install --no-binary=protobuf protobuf pysodium requests websocket-client-py3 PyYAML
+          - git clone https://github.com/exonum/exonum-python-client.git
+          - pip install -e exonum-python-client
+        script:
+          - black --check -l 120 . --exclude=".*_pb2.py" --exclude="exonum-python-client"
+          - mypy --ignore-missing-imports --disallow-untyped-defs ./exonum_launcher
+          - pylint exonum_launcher --max-line-length=120 --disable=fixme,bad-continuation,too-few-public-methods,duplicate-code
     - name: tests
-      install:
-        - pip install --no-binary=protobuf protobuf pysodium requests websocket-client-py3 PyYAML
-        - git clone https://github.com/exonum/exonum-python-client.git
-        - pip install -e exonum-python-client
-      script: python -m unittest
+        install:
+          - pip install --no-binary=protobuf protobuf pysodium requests websocket-client-py3 PyYAML
+          - git clone https://github.com/exonum/exonum-python-client.git
+          - pip install -e exonum-python-client
+        script: python -m unittest -v
