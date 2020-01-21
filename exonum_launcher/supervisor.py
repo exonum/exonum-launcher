@@ -164,7 +164,7 @@ class Supervisor:
             elif instance.action == "stop":
                 self._build_stop_service_change(instance, config_change)
             elif instance.action == "resume":
-                self._build_resume_service_change(instance, config_change)
+                self._build_resume_service_change(instance, config_loader, config_change)
             else:
                 raise RuntimeError(f"Unknown action type '{instance.action}' for instance '{instance}'")
 
@@ -263,7 +263,7 @@ class Supervisor:
 
         change.stop_service.CopyFrom(stop_service)
 
-    def _build_resume_service_change(self, instance: Instance, change: Any) -> None:
+    def _build_resume_service_change(self, instance: Instance, config_loader: InstanceSpecLoader, change: Any) -> None:
         """Creates a ConfigChange for resuming a service."""
 
         assert self._service_module is not None
@@ -284,6 +284,9 @@ class Supervisor:
         resume_service.artifact.version = instance.artifact.version
 
         resume_service.instance_id = instance.instance_id
+
+        if instance.config:
+            resume_service.params = config_loader.serialize_config(self._loader, instance, instance.config)
 
         change.resume_service.CopyFrom(resume_service)
 
