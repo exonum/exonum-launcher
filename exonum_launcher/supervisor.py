@@ -163,6 +163,8 @@ class Supervisor:
                 self._build_service_config_change(instance, config_loader, config_change)
             elif instance.action == "stop":
                 self._build_stop_service_change(instance, config_change)
+            elif instance.action == "resume":
+                self._build_resume_service_change(instance, config_change)
             else:
                 raise RuntimeError(f"Unknown action type '{instance.action}' for instance '{instance}'")
 
@@ -260,6 +262,30 @@ class Supervisor:
         stop_service.instance_id = instance.instance_id
 
         change.stop_service.CopyFrom(stop_service)
+
+    def _build_resume_service_change(self, instance: Instance, change: Any) -> None:
+        """Creates a ConfigChange for resuming a service."""
+
+        assert self._service_module is not None
+        resume_service = self._service_module.ResumeService()
+
+        if instance.instance_id is None:
+            # Instance ID is currently unknown, retrieve it.
+            explorer = Explorer(self._main_client)
+            instance_id = explorer.get_instance_id(instance)
+
+            if instance_id is None:
+                raise RuntimeError(f"Instance {instance} doesn't seem to be deployed, can't change configuration")
+
+            instance.instance_id = instance_id
+
+        resume_service.artifact.runtime_id = instance.artifact.runtime_id
+        resume_service.artifact.name = instance.artifact.name
+        resume_service.artifact.version = instance.artifact.version
+
+        resume_service.instance_id = instance.instance_id
+
+        change.resume_service.CopyFrom(resume_service)
 
     def send_deploy_request(self, deploy_request: bytes) -> List[str]:
         """Sends deploy request to the Supervisor."""

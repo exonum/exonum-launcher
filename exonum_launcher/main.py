@@ -49,6 +49,8 @@ def run_launcher(config: Configuration) -> Dict[str, Any]:
                 print(f"Instance {instance.name} -> start status: {id_str}")
             elif instance.action == "stop":
                 print(f"Instance {instance.name} stopped")
+            elif instance.action == "resume":
+                print(f"Instance {instance.name} resumed")
             elif instance.action == "config":
                 print(f"Instance {instance.name} -> config '{instance.config}' applied")
 
