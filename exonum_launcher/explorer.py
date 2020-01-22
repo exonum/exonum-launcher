@@ -3,7 +3,7 @@
 from typing import Optional, List
 import time
 
-from requests.exceptions import ConnectionError as RequestsConnectionError
+from requests.exceptions import ConnectionError as RequestsConnectionError, HTTPError
 from exonum_client import ExonumClient
 
 from .action_result import ActionResult
@@ -56,7 +56,9 @@ class Explorer:
         success = False
         for _ in range(self.RECONNECT_RETRIES):
             try:
-                info = self._client.public_api.get_tx_info(tx_hash).json()
+                response = self._client.public_api.get_tx_info(tx_hash)
+                response.raise_for_status()
+                info = response.json()
                 if info["type"] == "committed":
                     status = info["status"]
                     if status["type"] != "success":
@@ -67,7 +69,7 @@ class Explorer:
 
                 with self._client.create_subscriber("blocks") as subscriber:
                     subscriber.wait_for_new_event()
-            except (RequestsConnectionError, ConnectionRefusedError):
+            except (RequestsConnectionError, ConnectionRefusedError, HTTPError):
                 # Exonum API server may be rebooting. Wait for it.
                 time.sleep(self.RECONNECT_INTERVAL)
                 continue
