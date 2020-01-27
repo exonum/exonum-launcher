@@ -2,7 +2,7 @@
 """Setup Script for the Exonum Launcher."""
 import setuptools
 
-INSTALL_REQUIRES = ["pyyaml", "exonum-python-client==0.4.0.dev4"]
+INSTALL_REQUIRES = ["pyyaml", "exonum-python-client==1.0"]
 
 PYTHON_REQUIRES = ">=3.6"
 
