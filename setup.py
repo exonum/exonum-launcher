@@ -11,7 +11,7 @@ with open("README.md", "r") as readme:
 
 setuptools.setup(
     name="exonum-launcher",
-    version="0.1.3",
+    version="0.2.0",
     author="The Exonum team",
     author_email="contact@exonum.com",
     description="Exonum Dynamic Services Launcher",

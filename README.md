@@ -3,7 +3,10 @@
 **Status:**
 [![Travis Build Status](https://travis-ci.org/exonum/exonum-launcher.svg?branch=master)](https://travis-ci.org/exonum/exonum-launcher)
 
-A tool to send deploy&init requests into the Exonum blockchain.
+Exonum Dynamic Service Launcher is a tool to manage the Exonum blockchain.
+
+This tool is capable of deploying artifacts, managing running service, and
+changing the configuration of the Exonum blockchain.
 
 ## Usage
 
