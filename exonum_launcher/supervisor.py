@@ -178,11 +178,11 @@ class Supervisor:
         assert self._service_module is not None
 
         blockchain_module = ModuleManager.import_service_module(
-            self._supervisor_artifact_name, self._supervisor_artifact_version, "blockchain"
+            self._supervisor_artifact_name, self._supervisor_artifact_version, "exonum.blockchain"
         )
 
         types_module = ModuleManager.import_service_module(
-            self._supervisor_artifact_name, self._supervisor_artifact_version, "types"
+            self._supervisor_artifact_name, self._supervisor_artifact_version, "exonum.crypto.types"
         )
 
         new_consensus_config = blockchain_module.Config()
