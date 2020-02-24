@@ -165,6 +165,8 @@ class Supervisor:
                 self._build_stop_service_change(instance, config_change)
             elif instance.action == "resume":
                 self._build_resume_service_change(instance, config_loader, config_change)
+            elif instance.action == "freeze":
+                self._build_freeze_service_change(instance, config_change)
             else:
                 raise RuntimeError(f"Unknown action type '{instance.action}' for instance '{instance}'")
 
@@ -255,7 +257,7 @@ class Supervisor:
             instance_id = explorer.get_instance_id(instance)
 
             if instance_id is None:
-                raise RuntimeError(f"Instance {instance} doesn't seem to be deployed, can't change configuration")
+                raise RuntimeError(f"Instance {instance} does not seem to be deployed, it can't be stopped")
 
             instance.instance_id = instance_id
 
@@ -275,13 +277,9 @@ class Supervisor:
             instance_id = explorer.get_instance_id(instance)
 
             if instance_id is None:
-                raise RuntimeError(f"Instance {instance} doesn't seem to be deployed, can't change configuration")
+                raise RuntimeError(f"Instance {instance} does not seem to be deployed, it can't be resumed")
 
             instance.instance_id = instance_id
-
-        resume_service.artifact.runtime_id = instance.artifact.runtime_id
-        resume_service.artifact.name = instance.artifact.name
-        resume_service.artifact.version = instance.artifact.version
 
         resume_service.instance_id = instance.instance_id
 
@@ -289,6 +287,25 @@ class Supervisor:
             resume_service.params = config_loader.serialize_config(self._loader, instance, instance.config)
 
         change.resume_service.CopyFrom(resume_service)
+
+    def _build_freeze_service_change(self, instance: Instance, change: Any) -> None:
+        """Creates a ConfigChange for freezing a service."""
+
+        assert self._service_module is not None
+        freeze_service = self._service_module.FreezeService()
+
+        if instance.instance_id is None:
+            # Instance ID is currently unknown, retrieve it.
+            explorer = Explorer(self._main_client)
+            instance_id = explorer.get_instance_id(instance)
+
+            if instance_id is None:
+                raise RuntimeError(f"Instance {instance} does not seem to be deployed, in can't be frozen")
+
+            instance.instance_id = instance_id
+
+        freeze_service.instance_id = instance.instance_id
+        change.freeze_service.CopyFrom(freeze_service)
 
     def send_deploy_request(self, deploy_request: bytes) -> List[str]:
         """Sends deploy request to the Supervisor."""

@@ -34,9 +34,9 @@ class Instance:
     """Representation of parsed service instance description."""
 
     def __init__(self, artifact: Artifact, name: str, action: str, config: Any) -> None:
-        if action not in ["start", "stop", "config", "resume"]:
+        if action not in ["start", "stop", "config", "resume", "freeze"]:
             raise RuntimeError(
-                f"Incorrect action '{action}', available actions are: 'start', 'stop', 'config', 'resume'"
+                f"Incorrect action '{action}', available actions are: 'start', 'stop', 'config', 'resume', 'freeze'"
             )
 
         self.artifact = artifact

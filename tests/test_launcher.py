@@ -57,7 +57,7 @@ class TestLauncher(unittest.TestCase):
         # Setup mocks.
         launcher._supervisor.initialize = MagicMock(return_value=None)  # type: ignore
         for client in launcher.clients:
-            client.public_api.stats = MagicMock(return_value=response)
+            client.private_api.get_stats = MagicMock(return_value=response)
 
         # Initialize launcher.
         launcher.initialize()
@@ -65,7 +65,7 @@ class TestLauncher(unittest.TestCase):
         # Check that expected methods are called
         launcher._supervisor.initialize.assert_called()  # type: ignore
         for client in launcher.clients:
-            client.public_api.stats.assert_called()
+            client.private_api.get_stats.assert_called()
 
     def test_deinitialize(self) -> None:
         """Tests that deinitialize deinitializes Supervisor."""
@@ -79,7 +79,7 @@ class TestLauncher(unittest.TestCase):
         # Setup init mocks.
         launcher._supervisor.initialize = MagicMock(return_value=None)  # type: ignore
         for client in launcher.clients:
-            client.public_api.stats = MagicMock(return_value=response)
+            client.private_api.get_stats = MagicMock(return_value=response)
 
         # Initialize launcher.
         launcher.initialize()

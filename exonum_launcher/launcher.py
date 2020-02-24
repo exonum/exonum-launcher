@@ -82,7 +82,7 @@ class Launcher:
     def initialize(self) -> None:
         """Initializes the Launcher by initializing the Supervisor and checking that clients are valid."""
         for client in self.clients:
-            if client.public_api.stats().status_code != 200:
+            if client.private_api.get_stats().status_code != 200:
                 network = (
                     f"{client.schema}://{client.hostname}; ports: {client.public_api_port} / {client.private_api_port}"
                 )
