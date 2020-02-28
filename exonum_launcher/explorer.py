@@ -34,7 +34,11 @@ class Explorer:
         dispatcher_info = self._client.public_api.available_services().json()
 
         for value in dispatcher_info["artifacts"]:
-            if value["runtime_id"] == artifact.runtime_id and value["name"] == artifact.name:
+            if (
+                value["runtime_id"] == artifact.runtime_id
+                and value["name"] == artifact.name
+                and value["version"] == artifact.version
+            ):
                 return True
 
         return False
