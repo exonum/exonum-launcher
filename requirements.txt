@@ -7,4 +7,5 @@ PyYAML==5.1.2
 requests==2.22.0
 six==1.12.0
 urllib3==1.25.3
--e git+https://github.com/exonum/exonum-python-client@master#egg=exonum-python-client
+# Update the specified exonum-python-client revision whenever a new version is required.
+-e git+https://github.com/exonum/exonum-python-client@321282c110897d8e24fa087e3978cc49b5a5842b#egg=exonum-python-client
