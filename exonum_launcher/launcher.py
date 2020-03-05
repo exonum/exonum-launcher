@@ -52,7 +52,10 @@ class Launcher:
 
     def _load_runtime_plugins(self) -> Dict[str, RuntimeSpecLoader]:
         runtime_loaders: Dict[str, RuntimeSpecLoader] = dict()
-        for runtime_name, class_path in self.config.plugins["runtime"].items():
+        plugins = self.config.plugins
+        if "runtime" not in plugins:
+            return runtime_loaders
+        for runtime_name, class_path in plugins["runtime"].items():
             try:
                 runtime_loaders[runtime_name] = _import_class(class_path, RuntimeSpecLoader)
             except (ValueError, ImportError, ModuleNotFoundError, AttributeError) as error:
@@ -62,7 +65,10 @@ class Launcher:
 
     def _load_artifact_plugins(self) -> Dict[Artifact, InstanceSpecLoader]:
         instance_loaders: Dict[Artifact, InstanceSpecLoader] = dict()
-        for artifact_name, class_path in self.config.plugins["artifact"].items():
+        plugins = self.config.plugins
+        if "artifact" not in plugins:
+            return instance_loaders
+        for artifact_name, class_path in plugins["artifact"].items():
             try:
                 artifact = self.config.artifacts[artifact_name]
                 instance_loaders[artifact] = _import_class(class_path, InstanceSpecLoader)
