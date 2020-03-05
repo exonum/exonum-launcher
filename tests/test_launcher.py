@@ -127,6 +127,14 @@ class TestLauncher(unittest.TestCase):
         self.assertEqual(type(launcher._runtime_plugins["sample"]), TestRuntimeSpecLoader)
         self.assertEqual(type(launcher._artifact_plugins[cryptocurrency]), TestInstanceSpecLoader)
 
+    def test_load_plugins_runtime_only(self) -> None:
+        """Tests that plugins are loaded as expected if only the runtime plugins are present: no artifact plugins"""
+        config = TestConfiguration.load_config("custom_plugins_runtime_only.yml")
+
+        launcher = Launcher(config)
+        self.assertEqual(type(launcher._runtime_plugins["rust"]), RustSpecLoader)
+        self.assertEqual(type(launcher._runtime_plugins["sample3"]), TestRuntimeSpecLoader)
+
     def test_deploy_all(self) -> None:
         """Tests that deploy method uses supervisor to deploy all artifacts from config."""
         config = TestConfiguration.load_config("sample_config.yml")
