@@ -95,7 +95,15 @@ class Configuration:
         self.actual_from = data.get("actual_from", 0)
         self.artifacts: Dict[str, Artifact] = dict()
         self.instances: List[Instance] = list()
-        self.plugins: Dict[str, Dict[str, str]] = data.get("plugins", {"runtime": dict(), "artifact": dict()})
+
+        # Init the plugins
+        plugin_types: List[str] = ["runtime", "artifact"]
+        self.plugins: Dict[str, Dict[str, str]] = data.get("plugins", dict())
+        # Add the plugin types
+        for plugin_type in plugin_types:
+            if plugin_type not in self.plugins.keys():
+                self.plugins[plugin_type] = dict()
+
         self.consensus: Any = data.get("consensus", None)
 
         if self.consensus is not None:

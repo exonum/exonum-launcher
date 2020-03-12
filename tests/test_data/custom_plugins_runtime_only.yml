@@ -15,7 +15,7 @@ deadline_height: 20000
 
 artifacts:
   cryptocurrency:
-    runtime: sample
+    runtime: sample3
     name: "cryptocurrency"
     version: "1.0.0"
     spec:
