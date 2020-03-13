@@ -1,0 +1,26 @@
+networks:
+  - host: "127.0.0.1"
+    ssl: false
+    public-api-port: 8080
+    private-api-port: 8081
+
+runtimes:
+  sample3: 3
+
+plugins:
+  runtime:
+    sample3: "tests.spec_loaders.TestRuntimeSpecLoader"
+
+deadline_height: 20000
+
+artifacts:
+  cryptocurrency:
+    runtime: sample3
+    name: "cryptocurrency"
+    version: "1.0.0"
+    spec:
+      parameter: "value"
+
+instances:
+  xnm-token:
+    artifact: cryptocurrency
