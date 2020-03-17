@@ -1,14 +1,14 @@
 """Module encapsulating the interaction with the supervisor."""
-from typing import List, Optional, Any
 import json
+from typing import Any, List, Optional
 
 from exonum_client import ExonumClient
 from exonum_client.module_manager import ModuleManager
 
 from .configuration import Artifact, Instance
+from .explorer import Explorer
 from .instances import InstanceSpecLoader
 from .runtimes import RuntimeSpecLoader
-from .explorer import Explorer
 
 
 # pylint: disable=too-many-instance-attributes
@@ -104,6 +104,26 @@ class Supervisor:
 
         return deploy_request.SerializeToString()
 
+    def create_unload_request(self, artifact: Artifact, actual_from: int) -> bytes:
+        """Creates unload request for the given artifact."""
+        assert self._service_module is not None
+
+        unload_artifact_request = self._service_module.ConfigPropose()
+        unload_artifact_request.configuration_number = self._get_configuration_number()
+        unload_artifact_request.actual_from = actual_from
+
+        unload_artifact = self._service_module.UnloadArtifact()
+        unload_artifact.artifact_id.runtime_id = artifact.runtime_id
+        unload_artifact.artifact_id.name = artifact.name
+        unload_artifact.artifact_id.version = artifact.version
+
+        config_change = self._service_module.ConfigChange()
+        config_change.unload_artifact.CopyFrom(unload_artifact)
+
+        unload_artifact_request.changes.append(config_change)
+
+        return unload_artifact_request.SerializeToString()
+
     def create_start_instances_request(
         self, instances: List[Instance], config_loaders: List[InstanceSpecLoader], actual_from: int
     ) -> bytes:
@@ -143,11 +163,10 @@ class Supervisor:
             raise RuntimeError("Changing configuration for decentralized supervisor is not yet supported")
 
         assert self._service_module is not None
-        configuration_number = self._get_configuration_number()
 
         config_change_request = self._service_module.ConfigPropose()
+        config_change_request.configuration_number = self._get_configuration_number()
         config_change_request.actual_from = actual_from
-        config_change_request.configuration_number = configuration_number
 
         if consensus is not None:
             config_change = self._service_module.ConfigChange()
@@ -300,7 +319,7 @@ class Supervisor:
             instance_id = explorer.get_instance_id(instance)
 
             if instance_id is None:
-                raise RuntimeError(f"Instance {instance} does not seem to be deployed, in can't be frozen")
+                raise RuntimeError(f"Instance {instance} does not seem to be deployed, it can't be frozen")
 
             instance.instance_id = instance_id
 

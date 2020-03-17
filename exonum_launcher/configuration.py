@@ -1,7 +1,7 @@
 """Module capable of parsing config file"""
 from typing import Any, Dict, List, Optional
-import yaml
 
+import yaml
 from exonum_client.crypto import PublicKey
 
 RUNTIMES = {"rust": 0}
@@ -14,30 +14,32 @@ class Artifact:
     @staticmethod
     def from_dict(data: Dict[Any, Any]) -> "Artifact":
         """Parses an `Artifact` entity from provided dict."""
+        actions = ["none", "deploy", "unload"]
         spec = data.get("spec", dict())
-        # Check whether we need to deploy artifact or not
-        deploy = data.get("deploy", True)
-        return Artifact(name=data["name"], version=data["version"], runtime=data["runtime"], spec=spec, deploy=deploy)
+        # Check whether we need to deploy the artifact or not
+        action = data.get("action", "none")
+        if action not in actions:
+            raise RuntimeError(f"Incorrect action '{action}'. Available actions are: {actions}")
+        return Artifact(name=data["name"], version=data["version"], runtime=data["runtime"], spec=spec, action=action)
 
     # pylint: disable=too-many-arguments
-    def __init__(self, name: str, version: str, runtime: str, spec: Any, deploy: bool) -> None:
+    def __init__(self, name: str, version: str, runtime: str, spec: Any, action: str) -> None:
         self.name = name
         self.version = version
         self.runtime = runtime
         self.runtime_id = RUNTIMES[runtime]
         self.spec = spec
         self.deadline_height = None
-        self.deploy = deploy
+        self.action = action
 
 
 class Instance:
     """Representation of parsed service instance description."""
 
     def __init__(self, artifact: Artifact, name: str, action: str, config: Any) -> None:
-        if action not in ["start", "stop", "config", "resume", "freeze"]:
-            raise RuntimeError(
-                f"Incorrect action '{action}', available actions are: 'start', 'stop', 'config', 'resume', 'freeze'"
-            )
+        actions = ["start", "stop", "config", "resume", "freeze"]
+        if action not in actions:
+            raise RuntimeError(f"Incorrect action '{action}', available actions are: {actions}")
 
         self.artifact = artifact
         self.name = name
@@ -101,14 +103,16 @@ class Configuration:
         if self.consensus is not None:
             self._validate_consensus_config()
 
-        # Imports configuration parser for each artifact.
-        for name, value in data["artifacts"].items():
+        # Imports configuration parser for each artifact.]
+        artifacts = data.get("artifacts", dict())
+        for name, value in artifacts.items():
             artifact = Artifact.from_dict(value)
             artifact.deadline_height = _get_specific("deadline_height", value, parent=data)
             self.artifacts[str(name)] = artifact
 
         # Converts config for each instance into protobuf
-        for (name, value) in data["instances"].items():
+        instances = data.get("instances", dict())
+        for (name, value) in instances.items():
             artifact = self.artifacts[value["artifact"]]
             instance = Instance(artifact, name, value.get("action", "start"), value.get("config", None))
             self.instances += [instance]

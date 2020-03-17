@@ -55,20 +55,26 @@ class Explorer:
 
         return None
 
+    def get_tx_status(self, tx_hash: str) -> bool:
+        """Returns status of the transaction by its hash."""
+        response = self._client.public_api.get_tx_info(tx_hash)
+        response.raise_for_status()
+        info = response.json()
+
+        if info["type"] == "committed":
+            status = info["status"]
+            if status["type"] == "success":
+                return True
+
+        return False
+
     def wait_for_tx(self, tx_hash: str) -> None:
         """Waits until the tx is committed."""
         success = False
         for _ in range(self.RECONNECT_RETRIES):
             try:
-                response = self._client.public_api.get_tx_info(tx_hash)
-                response.raise_for_status()
-                info = response.json()
-                if info["type"] == "committed":
-                    status = info["status"]
-                    if status["type"] != "success":
-                        raise ExecutionFailError(f"Transaction execution failed: {status}")
-
-                    success = True
+                success = self.get_tx_status(tx_hash)
+                if success:
                     break
 
                 with self._client.create_subscriber("blocks") as subscriber:

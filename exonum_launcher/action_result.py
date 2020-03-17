@@ -1,12 +1,13 @@
 """Module containing ActionResult enum"""
-from enum import Enum, auto as enum_auto
+from enum import auto as enum_auto, Enum
 
 
 class ActionResult(Enum):
-    """Denotes if action was successfull or not."""
+    """Denotes if the action was successful or not."""
 
     Success = enum_auto()
     Fail = enum_auto()
+    Unknown = enum_auto()
 
     def __bool__(self) -> bool:
         return self == ActionResult.Success

@@ -1,16 +1,16 @@
 """Main module of the Exonum Launcher."""
 import importlib
-from typing import Any, List, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from exonum_client import ExonumClient
 
 from .action_result import ActionResult
 from .configuration import Artifact, Configuration
-from .runtimes import RuntimeSpecLoader, RustSpecLoader
+from .explorer import Explorer, NotCommittedError
 from .instances import DefaultInstanceSpecLoader, InstanceSpecLoader
-from .supervisor import Supervisor
-from .explorer import Explorer
 from .launch_state import LaunchState
+from .runtimes import RuntimeSpecLoader, RustSpecLoader
+from .supervisor import Supervisor
 
 
 class Launcher:
@@ -31,7 +31,7 @@ class Launcher:
         # Load artifact plugins.
         self._artifact_plugins: Dict[Artifact, InstanceSpecLoader] = self._load_artifact_plugins()
 
-        # Create supervsior and explorer.
+        # Create supervisor and explorer.
         self._supervisor = Supervisor(self.config.supervisor_mode, self.clients)
         self._explorer = Explorer(self.clients[0])
 
@@ -91,7 +91,7 @@ class Launcher:
         self._supervisor.initialize()
 
     def deinitialize(self) -> None:
-        """Deinitializes the Launcher by deinitializing the Supervisor."""
+        """De-initializes the Launcher by de-initializing the Supervisor."""
         self._supervisor.deinitialize()
 
     def add_runtime_spec_loader(self, runtime: str, spec_loader: RuntimeSpecLoader) -> None:
@@ -111,15 +111,12 @@ class Launcher:
     def deploy_all(self) -> None:
         """Deploys all the services from the provided config."""
         for artifact in self.config.artifacts.values():
-            if not artifact.deploy:
-                # Skip artifact that we should not deploy
+            if artifact.action != "deploy":
                 continue
 
             spec_loader = self._runtime_plugins[artifact.runtime]
             deploy_request = self._supervisor.create_deploy_request(artifact, spec_loader)
-
             txs = self._supervisor.send_deploy_request(deploy_request)
-
             self.launch_state.add_pending_deploy(artifact, txs)
 
     def wait_for_deploy(self) -> None:
@@ -138,6 +135,10 @@ class Launcher:
             self._artifact_plugins.get(instance.artifact, DefaultInstanceSpecLoader())
             for instance in self.config.instances
         ]
+
+        if len(config_loaders) == 0:
+            return
+
         config_proposal = self._supervisor.create_config_change_request(
             self.config.consensus, self.config.instances, config_loaders, self.config.actual_from
         )
@@ -147,6 +148,10 @@ class Launcher:
 
     def wait_for_start(self) -> None:
         """Waits for all the initializations to be completed."""
+
+        if len(self.launch_state.pending_configs()) == 0:
+            return
+
         tx_hashes = self.launch_state.pending_configs()[self.config]
 
         self._explorer.wait_for_txs(tx_hashes)
@@ -162,6 +167,30 @@ class Launcher:
                 break
 
         self.launch_state.complete_config(self.config, result)
+
+    def unload_all(self) -> None:
+        """Unload all artifacts marked as unloaded."""
+        for artifact in self.config.artifacts.values():
+            if artifact.action != "unload":
+                continue
+
+            unload_request = self._supervisor.create_unload_request(artifact, self.config.actual_from)
+            txs = self._supervisor.send_propose_config_request(unload_request)
+            self.launch_state.add_pending_unload(artifact, txs)
+
+    def wait_for_unload(self) -> None:
+        """Wait for all unloads to be completed."""
+        for (artifact, tx_hashes) in self.launch_state.pending_unloads().items():
+            try:
+                self._explorer.wait_for_txs(tx_hashes)
+
+                if self._explorer.get_tx_status(tx_hashes[0]):
+                    self.launch_state.completed_unloads()[artifact] = ActionResult.Success
+                else:
+                    self.launch_state.completed_unloads()[artifact] = ActionResult.Fail
+
+            except NotCommittedError:
+                self.launch_state.completed_unloads()[artifact] = ActionResult.Fail
 
     def explorer(self) -> Explorer:
         """Returns used explorer"""

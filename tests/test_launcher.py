@@ -1,16 +1,16 @@
 # pylint: disable=missing-docstring, protected-access, no-self-use
 
 import unittest
-from unittest.mock import MagicMock, call
+from unittest.mock import call, MagicMock
+
 from requests import Response
 
 from exonum_launcher.action_result import ActionResult
-from exonum_launcher.supervisor import Supervisor
 from exonum_launcher.launcher import Launcher
 from exonum_launcher.runtimes.rust import RustSpecLoader
-
+from exonum_launcher.supervisor import Supervisor
+from .spec_loaders import TestInstanceSpecLoader, TestRuntimeSpecLoader
 from .test_config import TestConfiguration
-from .spec_loaders import TestRuntimeSpecLoader, TestInstanceSpecLoader
 
 
 class MockDefaultInstanceSpecLoader:
@@ -137,7 +137,7 @@ class TestLauncher(unittest.TestCase):
         send_calls_sequence = []
         for artifact in config.artifacts.values():
             # Skip artifacts that should not be deployed
-            if not artifact.deploy:
+            if artifact.action != "deploy":
                 continue
 
             create_calls_sequence.append(call(artifact, launcher._runtime_plugins[artifact.runtime]))
@@ -156,7 +156,7 @@ class TestLauncher(unittest.TestCase):
 
         # Check that results were added to the pending deployments.
         for artifact in config.artifacts.values():
-            if artifact.deploy:
+            if artifact.action == "deploy":
                 self.assertEqual(launcher.launch_state._pending_deployments[artifact], ["123"])
             else:
                 self.assertTrue(artifact not in launcher.launch_state._pending_deployments)

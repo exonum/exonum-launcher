@@ -59,14 +59,14 @@ deadline_height: 10000
 artifacts:
   cryptocurrency:
     runtime: rust
-    name: "exonum-cryptocurrency-advanced:0.12.0"
+    name: "exonum-cryptocurrency-advanced:1.0.0-rc.2"
+    action: deploy
   
   # Example of artifact that should not be deployed
   example_artifact:
     runtime: rust
-    name: "exonum-cryptocurrency-advanced:0.12.0"
-    deploy: false
-  
+    name: "exonum-cryptocurrency-advanced:1.0.0-rc.2"
+    
 instances:
   xnm-token:
     artifact: cryptocurrency
@@ -85,11 +85,18 @@ instances:
       val_b: 345
 ```
 
-`action` field can be one of the following:
+`action` field in the `artifacts` section can be one of the following:
 
-- `start`: to start a new instance;
-- `config` to change a configuration of existing service (only in `simple` supervisor mode!);
-- `stop` to stop a running service.
+- `deploy` - to deploy an artifact.
+- `unload` - to unload deployed artifact.
+
+`action` field in the `instances` section can be one of the following:
+
+- `start` - to start a new instance;
+- `config` - to change a configuration of existing service (only in `simple` supervisor mode!);
+- `stop` - to stop a running service.
+- `freeze` - to freeze a running service.
+- `resume` - to resume a frozen or stopped service.
 
 **Important:** if you have more than one validator in the network, ensure that connection data
 (`networks` section of the config) is specified for **every** validator.
