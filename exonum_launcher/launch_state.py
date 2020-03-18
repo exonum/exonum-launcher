@@ -13,8 +13,8 @@ class LaunchState:
         self._pending_configs: Dict[Configuration, List[str]] = dict()
         self._completed_deployments: Dict[Artifact, ActionResult] = dict()
         self._completed_configs: Dict[Configuration, ActionResult] = dict()
-        self._pending_unloads: Dict[Artifact, List[str]] = dict()
-        self._completed_unloads: Dict[Artifact, ActionResult] = dict()
+        self._pending_unloads: List[str] = list()
+        self.unload_status = ActionResult.Unknown, ""
 
     def add_pending_deploy(self, artifact: Artifact, txs: List[str]) -> None:
         """Adds a pending deploy to the state."""
@@ -58,14 +58,10 @@ class LaunchState:
 
         return self._completed_configs[config]
 
-    def add_pending_unload(self, artifact: Artifact, txs: List[str]) -> None:
+    def add_pending_unload(self, txs: List[str]) -> None:
         """Adds status for unloaded artifact."""
-        self._pending_unloads[artifact] = txs
+        self._pending_unloads = txs
 
-    def pending_unloads(self) -> Dict[Artifact, List[str]]:
+    def pending_unloads(self) -> List[str]:
         """Returns pending unload statuses."""
         return self._pending_unloads
-
-    def completed_unloads(self) -> Dict[Artifact, ActionResult]:
-        """Returns pending unload statuses."""
-        return self._completed_unloads

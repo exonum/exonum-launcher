@@ -170,27 +170,25 @@ class Launcher:
 
     def unload_all(self) -> None:
         """Unload all artifacts marked as unloaded."""
-        for artifact in self.config.artifacts.values():
-            if artifact.action != "unload":
-                continue
-
-            unload_request = self._supervisor.create_unload_request(artifact, self.config.actual_from)
-            txs = self._supervisor.send_propose_config_request(unload_request)
-            self.launch_state.add_pending_unload(artifact, txs)
+        unload_request = self._supervisor.create_unload_request(
+            list(self.config.artifacts.values()), self.config.actual_from
+        )
+        txs = self._supervisor.send_propose_config_request(unload_request)
+        self.launch_state.add_pending_unload(txs)
 
     def wait_for_unload(self) -> None:
         """Wait for all unloads to be completed."""
-        for (artifact, tx_hashes) in self.launch_state.pending_unloads().items():
-            try:
-                self._explorer.wait_for_txs(tx_hashes)
+        tx_hashes = self.launch_state.pending_unloads()
+        try:
+            self._explorer.wait_for_txs(tx_hashes)
+            tx_status, description = self._explorer.get_tx_status(tx_hashes[0])
+            if tx_status:
+                self.launch_state.unload_status = ActionResult.Success, description
+            else:
+                self.launch_state.unload_status = ActionResult.Fail, description
 
-                if self._explorer.get_tx_status(tx_hashes[0]):
-                    self.launch_state.completed_unloads()[artifact] = ActionResult.Success
-                else:
-                    self.launch_state.completed_unloads()[artifact] = ActionResult.Fail
-
-            except NotCommittedError:
-                self.launch_state.completed_unloads()[artifact] = ActionResult.Fail
+        except NotCommittedError as error:
+            self.launch_state.unload_status = ActionResult.Fail, str(error)
 
     def explorer(self) -> Explorer:
         """Returns used explorer"""

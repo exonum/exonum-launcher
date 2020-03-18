@@ -13,4 +13,4 @@ class ActionResult(Enum):
         return self == ActionResult.Success
 
     def __str__(self) -> str:
-        return "success" if bool(self) else "fail"
+        return "success" if bool(self) else "failed"

@@ -104,7 +104,7 @@ class Supervisor:
 
         return deploy_request.SerializeToString()
 
-    def create_unload_request(self, artifact: Artifact, actual_from: int) -> bytes:
+    def create_unload_request(self, artifacts: List[Artifact], actual_from: int) -> bytes:
         """Creates unload request for the given artifact."""
         assert self._service_module is not None
 
@@ -112,15 +112,19 @@ class Supervisor:
         unload_artifact_request.configuration_number = self._get_configuration_number()
         unload_artifact_request.actual_from = actual_from
 
-        unload_artifact = self._service_module.UnloadArtifact()
-        unload_artifact.artifact_id.runtime_id = artifact.runtime_id
-        unload_artifact.artifact_id.name = artifact.name
-        unload_artifact.artifact_id.version = artifact.version
+        for artifact in artifacts:
+            if artifact.action != "unload":
+                continue
 
-        config_change = self._service_module.ConfigChange()
-        config_change.unload_artifact.CopyFrom(unload_artifact)
+            unload_artifact = self._service_module.UnloadArtifact()
+            unload_artifact.artifact_id.runtime_id = artifact.runtime_id
+            unload_artifact.artifact_id.name = artifact.name
+            unload_artifact.artifact_id.version = artifact.version
 
-        unload_artifact_request.changes.append(config_change)
+            config_change = self._service_module.ConfigChange()
+            config_change.unload_artifact.CopyFrom(unload_artifact)
+
+            unload_artifact_request.changes.append(config_change)
 
         return unload_artifact_request.SerializeToString()
 
