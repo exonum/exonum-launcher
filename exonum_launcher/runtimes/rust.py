@@ -1,6 +1,6 @@
 """Artifact spec encoder for Rust runtime"""
 
-from typing import Dict, Any
+from typing import Any, Dict
 
 from .runtime import RuntimeSpecLoader
 

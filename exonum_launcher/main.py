@@ -15,29 +15,45 @@ def load_config(path: str) -> Configuration:
 def run_launcher(config: Configuration) -> Dict[str, Any]:
     """Runs the launcher.
 
-    Returns the dict with two entries:
+    Returns a dictionary with two entries:
 
-    "artifacts" - contain a mapping `Artifact` => `bool denoting if artifact is deploted`
-    "instances" - contain a mapping `Instance` => `Optional[InstanceId]`.
+    "artifacts" - contains a mapping `Artifact` => `bool denoting if artifact is deployed`
+    "instances" - contains a mapping `Instance` => `Optional[InstanceId]`.
     """
     with Launcher(config) as launcher:
         explorer = launcher.explorer()
+        results: Dict[str, Any] = {"artifacts": dict(), "instances": dict()}
 
+        # Unload stage
+        launcher.unload_all()
+        launcher.wait_for_unload()
+
+        unload_status, error_message = launcher.launch_state.unload_status
+        if unload_status == ActionResult.Success:
+            for artifact in launcher.config.artifacts.values():
+                if artifact.action == "unload":
+                    artifact_unload_status = not explorer.is_deployed(artifact)
+                    artifact_unload_status_msg = "succeed" if artifact_unload_status else "failed"
+                    print(f"Artifact {artifact.name}:{artifact.version} -> unload status: {artifact_unload_status_msg}")
+        else:
+            print(f"Artifacts unload status: {unload_status}, with error: {error_message}")
+
+        # Deploy stage
         launcher.deploy_all()
         launcher.wait_for_deploy()
 
-        results: Dict[str, Any] = {"artifacts": dict(), "instances": dict()}
-
         for artifact in launcher.launch_state.completed_deployments():
-            deployed = explorer.check_deployed(artifact)
+            deployed = explorer.is_deployed(artifact)
             results["artifacts"][artifact] = deployed
-            deployed_str = "succeed" if deployed else "failed"
-            print(f"Artifact {artifact.name} -> deploy status: {deployed_str}")
+            status_description = "succeed" if deployed else "failed"
+            print(f"Artifact {artifact.name}:{artifact.version} -> deploy status: {status_description}")
 
+        # Start stage
         launcher.start_all()
         launcher.wait_for_start()
 
-        config_state = launcher.launch_state.completed_configs()[launcher.config]
+        config_state = launcher.launch_state.get_completed_config_state(launcher.config)
+
         if config_state == ActionResult.Fail:
             print("Applying of config -> FAIL")
 

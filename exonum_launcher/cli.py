@@ -1,5 +1,6 @@
 """CLI for exonum launcher"""
 import argparse
+
 from .main import main as launcher_main
 
 

@@ -5,19 +5,18 @@ networks:
     private-api-port: 8081
 
 deadline_height: 10000
-
 supervisor_mode: "simple"
 
 artifacts:
   time:
     runtime: rust
     name: "exonum-time"
-    version: "0.13.0-rc.2"
+    version: "1.0.0-rc.2"
   timestamping:
     runtime: rust
     name: "exonum-timestamping"
-    version: "0.13.0-rc.2"
-  
+    version: "1.0.0-rc.2"
+
 instances:
   time:
     artifact: time
@@ -27,4 +26,3 @@ instances:
     action: start
     config:
       time_service_name: "time"
-      time_service_id: 2
