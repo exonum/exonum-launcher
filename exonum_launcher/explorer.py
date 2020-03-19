@@ -103,8 +103,7 @@ class Explorer:
                 return ActionResult.Success
 
             with self._client.create_subscriber("blocks") as subscriber:
-                # TODO Temporary solution because it currently it takes up to 10 seconds to
-                # update dispatcher info.
+                # TODO Temporary solution because currently it takes up to 10 seconds to update dispatcher info.
                 time.sleep(2)
                 subscriber.wait_for_new_event()
 

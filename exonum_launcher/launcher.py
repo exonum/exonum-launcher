@@ -1,6 +1,8 @@
 """Main module of the Exonum Launcher."""
 import importlib
+import time
 from typing import Any, Dict, List, Optional
+from requests.exceptions import ConnectionError as RequestsConnectionError, HTTPError
 
 from exonum_client import ExonumClient
 
@@ -189,6 +191,36 @@ class Launcher:
 
         except NotCommittedError as error:
             self.launch_state.unload_status = ActionResult.Fail, str(error)
+
+    def migrate_all(self) -> None:
+        """Migrates all services from the provided config."""
+        for service_name, artifact in self.config.migrations.items():
+            migration_request = self._supervisor.create_migration_request(service_name, artifact)
+            txs = self._supervisor.send_migration_request(migration_request)
+            self.launch_state.add_pending_migration((service_name, artifact), txs)
+
+    def wait_for_migration(self) -> None:
+        """Waits for all migrations to be completed."""
+        pending_migrations = self.launch_state.pending_migrations()
+        for tx_hashes in pending_migrations.values():
+            self._explorer.wait_for_txs(tx_hashes)
+
+        for (service_name, artifact), _ in pending_migrations.items():
+            result = ActionResult.Fail
+            description = ""
+            for _ in range(0, self._explorer.RECONNECT_RETRIES):
+                try:
+                    state = self._supervisor.get_migration_state(service_name, artifact)
+                    if state["state"] == "succeed":
+                        result = ActionResult.Success
+                        description = "Success"
+                        break
+                    if "failed" in state["state"]:
+                        description = state["state"]["failed"]["error"]["description"]
+                    time.sleep(self._explorer.RECONNECT_INTERVAL)
+                except (RequestsConnectionError, ConnectionRefusedError, HTTPError):
+                    time.sleep(self._explorer.RECONNECT_INTERVAL)
+            self.launch_state.complete_migration(service_name, (result, description))
 
     def explorer(self) -> Explorer:
         """Returns used explorer"""

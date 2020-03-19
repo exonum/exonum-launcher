@@ -21,58 +21,82 @@ def run_launcher(config: Configuration) -> Dict[str, Any]:
     "instances" - contains a mapping `Instance` => `Optional[InstanceId]`.
     """
     with Launcher(config) as launcher:
-        explorer = launcher.explorer()
         results: Dict[str, Any] = {"artifacts": dict(), "instances": dict()}
-
         # Unload stage
-        launcher.unload_all()
-        launcher.wait_for_unload()
-
-        unload_status, error_message = launcher.launch_state.unload_status
-        if unload_status == ActionResult.Success:
-            for artifact in launcher.config.artifacts.values():
-                if artifact.action == "unload":
-                    artifact_unload_status = not explorer.is_deployed(artifact)
-                    artifact_unload_status_msg = "succeed" if artifact_unload_status else "failed"
-                    print(f"Artifact {artifact.name}:{artifact.version} -> unload status: {artifact_unload_status_msg}")
-        else:
-            print(f"Artifacts unload status: {unload_status}, with error: {error_message}")
+        _unload(launcher)
 
         # Deploy stage
-        launcher.deploy_all()
-        launcher.wait_for_deploy()
+        _deploy(launcher, results)
 
-        for artifact in launcher.launch_state.completed_deployments():
-            deployed = explorer.is_deployed(artifact)
-            results["artifacts"][artifact] = deployed
-            status_description = "succeed" if deployed else "failed"
-            print(f"Artifact {artifact.name}:{artifact.version} -> deploy status: {status_description}")
+        # Migration stage
+        _migration(launcher)
 
         # Start stage
-        launcher.start_all()
-        launcher.wait_for_start()
-
-        config_state = launcher.launch_state.get_completed_config_state(launcher.config)
-
-        if config_state == ActionResult.Fail:
-            print("Applying of config -> FAIL")
-
-        for instance in launcher.config.instances:
-            if instance.action == "start":
-                instance_id = explorer.get_instance_id(instance)
-                results["instances"][instance] = instance_id
-                id_str = "started with ID {}".format(instance_id) if instance_id else "start failed"
-                print(f"Instance {instance.name} -> start status: {id_str}")
-            elif instance.action == "stop":
-                print(f"Instance {instance.name} stopped")
-            elif instance.action == "resume":
-                print(f"Instance {instance.name} resumed")
-            elif instance.action == "freeze":
-                print(f"Instance {instance.name} frozen")
-            elif instance.action == "config":
-                print(f"Instance {instance.name} -> config '{instance.config}' applied")
+        _start(launcher, results)
 
         return results
+
+
+def _unload(launcher: Launcher) ->  None:
+    launcher.unload_all()
+    launcher.wait_for_unload()
+
+    unload_status, error_message = launcher.launch_state.unload_status
+    if unload_status == ActionResult.Success:
+        for artifact in launcher.config.artifacts.values():
+            if artifact.action == "unload":
+                artifact_unload_status = not launcher.explorer().is_deployed(artifact)
+                artifact_unload_status_msg = "succeed" if artifact_unload_status else "failed"
+                print(f"Artifact {artifact.name}:{artifact.version} -> unload status: {artifact_unload_status_msg}")
+    else:
+        print(f"Artifacts unload status: {unload_status}, with error: {error_message}")
+
+
+def _deploy(launcher: Launcher, results: Dict[str, Any]) -> None:
+    launcher.deploy_all()
+    launcher.wait_for_deploy()
+
+    for artifact in launcher.launch_state.completed_deployments():
+        deployed = launcher.explorer().is_deployed(artifact)
+        results["artifacts"][artifact] = deployed
+        status_description = "succeed" if deployed else "failed"
+        print(f"Artifact {artifact.name}:{artifact.version} -> deploy status: {status_description}")
+
+
+def _migration(launcher: Launcher) -> None:
+    launcher.migrate_all()
+    launcher.wait_for_migration()
+
+    for service, (status, description) in launcher.launch_state.completed_migrations().items():
+        if status:
+            print(f"The service {service} -> migrate status: {status}")
+        else:
+            print(f"The service {service} -> migrate status: {status}, with error: {description}")
+
+
+def _start(launcher: Launcher, results) -> None:
+    launcher.start_all()
+    launcher.wait_for_start()
+
+    config_state = launcher.launch_state.get_completed_config_state(launcher.config)
+
+    if config_state == ActionResult.Fail:
+        print("Applying of config -> FAIL")
+
+    for instance in launcher.config.instances:
+        if instance.action == "start":
+            instance_id = launcher.explorer().get_instance_id(instance)
+            results["instances"][instance] = instance_id
+            id_str = "started with ID {}".format(instance_id) if instance_id else "start failed"
+            print(f"Instance {instance.name} -> start status: {id_str}")
+        elif instance.action == "stop":
+            print(f"Instance {instance.name} stopped")
+        elif instance.action == "resume":
+            print(f"Instance {instance.name} resumed")
+        elif instance.action == "freeze":
+            print(f"Instance {instance.name} frozen")
+        elif instance.action == "config":
+            print(f"Instance {instance.name} -> config '{instance.config}' applied")
 
 
 def main(args: Any) -> None:

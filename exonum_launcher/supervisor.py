@@ -91,6 +91,14 @@ class Supervisor:
 
         return int(response.json())
 
+    def get_migration_state(self, service: str, artifact: Artifact) -> Any:
+        """Retrieves a state of the migration for the service."""
+        supervisor_private_api = self._main_client.service_private_api("supervisor")
+        response = supervisor_private_api.get_service(
+            f"migration-status?service={service}&new_artifact={artifact}&deadline_height={artifact.deadline_height}"
+        )
+        return response.json()
+
     def create_deploy_request(self, artifact: Artifact, spec_loader: RuntimeSpecLoader) -> bytes:
         """Creates a deploy request for given artifact."""
         assert self._service_module is not None
@@ -103,6 +111,19 @@ class Supervisor:
         deploy_request.spec = spec_loader.encode_spec(artifact.spec)
 
         return deploy_request.SerializeToString()
+
+    def create_migration_request(self, service_name: str, artifact: Artifact) -> bytes:
+        """Creates a migration request for given service."""
+        assert self._service_module is not None
+        migration_request = self._service_module.MigrationRequest()
+
+        migration_request.service = service_name
+        migration_request.new_artifact.runtime_id = artifact.runtime_id
+        migration_request.new_artifact.version = artifact.version
+        migration_request.new_artifact.name = artifact.name
+        migration_request.deadline_height = artifact.deadline_height
+
+        return migration_request.SerializeToString()
 
     def create_unload_request(self, artifacts: List[Artifact], actual_from: int) -> bytes:
         """Creates unload request for the given artifact."""
@@ -337,3 +358,7 @@ class Supervisor:
     def send_propose_config_request(self, config_proposal: bytes) -> List[str]:
         """Sends propose config request to the Supervisor."""
         return self._post_to_supervisor("propose-config", config_proposal)
+
+    def send_migration_request(self, migration_request: bytes) -> List[str]:
+        """Sends migration request to the Supervisor"""
+        return self._post_to_supervisor("migrate", migration_request)
