@@ -37,7 +37,7 @@ def run_launcher(config: Configuration) -> Dict[str, Any]:
         return results
 
 
-def _unload(launcher: Launcher) ->  None:
+def _unload(launcher: Launcher) -> None:
     launcher.unload_all()
     launcher.wait_for_unload()
 
@@ -74,7 +74,7 @@ def _migration(launcher: Launcher) -> None:
             print(f"The service {service} -> migrate status: {status}, with error: {description}")
 
 
-def _start(launcher: Launcher, results) -> None:
+def _start(launcher: Launcher, results: Dict[str, Any]) -> None:
     launcher.start_all()
     launcher.wait_for_start()
 
