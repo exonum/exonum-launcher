@@ -47,7 +47,7 @@ def _unload(launcher: Launcher) -> None:
             if artifact.action == "unload":
                 artifact_unload_status = not launcher.explorer().is_deployed(artifact)
                 artifact_unload_status_msg = "succeed" if artifact_unload_status else "failed"
-                print(f"Artifact {artifact.name}:{artifact.version} -> unload status: {artifact_unload_status_msg}")
+                print(f"Artifact {artifact} -> unload status: {artifact_unload_status_msg}")
     else:
         print(f"Artifacts unload status: {unload_status}, with error: {error_message}")
 
@@ -60,7 +60,7 @@ def _deploy(launcher: Launcher, results: Dict[str, Any]) -> None:
         deployed = launcher.explorer().is_deployed(artifact)
         results["artifacts"][artifact] = deployed
         status_description = "succeed" if deployed else "failed"
-        print(f"Artifact {artifact.name}:{artifact.version} -> deploy status: {status_description}")
+        print(f"Artifact {artifact} -> deploy status: {status_description}")
 
 
 def _migration(launcher: Launcher) -> None:

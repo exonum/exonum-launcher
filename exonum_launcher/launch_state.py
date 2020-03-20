@@ -73,7 +73,7 @@ class LaunchState:
         self._pending_migrations[service] = txs
 
     def pending_migrations(self) -> Dict[Tuple[str, Artifact], List[str]]:
-        """Returns a pending migrations."""
+        """Returns pending migrations."""
         return self._pending_migrations
 
     def complete_migration(self, service_name: str, result: Tuple[ActionResult, str]) -> None:
