@@ -27,7 +27,7 @@ jobs:
     script:
       - black --check -l 120 . --exclude=".*_pb2.py" --exclude="exonum-python-client"
       - mypy --ignore-missing-imports --disallow-untyped-defs ./exonum_launcher
-      - pylint exonum_launcher --max-line-length=120 --disable=fixme,bad-continuation,too-few-public-methods,duplicate-code
+      - pylint exonum_launcher --max-line-length=120 --disable=fixme,bad-continuation,too-few-public-methods,duplicate-code,too-many-instance-attributes
   - name: tests
     install:
       - pip install -r requirements.txt

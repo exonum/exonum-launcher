@@ -32,6 +32,9 @@ class Artifact:
         self.deadline_height = None
         self.action = action
 
+    def __str__(self) -> str:
+        return f"{self.runtime_id}:{self.name}:{self.version}"
+
 
 class Instance:
     """Representation of parsed service instance description."""
@@ -97,33 +100,40 @@ class Configuration:
         self.actual_from = data.get("actual_from", 0)
         self.artifacts: Dict[str, Artifact] = dict()
         self.instances: List[Instance] = list()
-
-        # Init the plugins
-        plugin_types: List[str] = ["runtime", "artifact"]
+        self.migrations: Dict[str, Artifact] = dict()
         self.plugins: Dict[str, Dict[str, str]] = data.get("plugins", dict())
-        # Add the plugin types
-        for plugin_type in plugin_types:
-            if plugin_type not in self.plugins.keys():
-                self.plugins[plugin_type] = dict()
-
         self.consensus: Any = data.get("consensus", None)
 
         if self.consensus is not None:
             self._validate_consensus_config()
 
-        # Imports configuration parser for each artifact.]
+        # Init the plugins
+        plugin_types: List[str] = ["runtime", "artifact"]
+        # Add the plugin types
+        for plugin_type in plugin_types:
+            if plugin_type not in self.plugins.keys():
+                self.plugins[plugin_type] = dict()
+
+        # Imports configuration parser for each artifact.
         artifacts = data.get("artifacts", dict())
         for name, value in artifacts.items():
             artifact = Artifact.from_dict(value)
             artifact.deadline_height = _get_specific("deadline_height", value, parent=data)
             self.artifacts[str(name)] = artifact
 
-        # Converts config for each instance into protobuf
+        # Converts config for each instance into protobuf.
         instances = data.get("instances", dict())
         for (name, value) in instances.items():
             artifact = self.artifacts[value["artifact"]]
             instance = Instance(artifact, name, value.get("action", "start"), value.get("config", None))
             self.instances += [instance]
+
+        # Import configuration parser for each migration.
+        migrations = data.get("migrations", dict())
+        for name, value in migrations.items():
+            artifact = Artifact.from_dict(value)
+            artifact.deadline_height = _get_specific("deadline_height", value, parent=data)
+            self.migrations[str(name)] = artifact
 
     def _validate_consensus_config(self) -> None:
         assert self.consensus is not None

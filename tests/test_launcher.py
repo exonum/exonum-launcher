@@ -140,7 +140,7 @@ class TestLauncher(unittest.TestCase):
         config = TestConfiguration.load_config("sample_config.yml")
         launcher = Launcher(config)
 
-        # Build a list of expected arguements for method calls.
+        # Build a list of expected arguments for method calls.
         create_calls_sequence = []
         send_calls_sequence = []
         for artifact in config.artifacts.values():
@@ -170,7 +170,7 @@ class TestLauncher(unittest.TestCase):
                 self.assertTrue(artifact not in launcher.launch_state._pending_deployments)
 
     def test_start_all(self) -> None:
-        """Tests that deploy method uses supervisor to deploy all artifacts from config."""
+        """Tests that start method uses supervisor to start all services from the config."""
         config = TestConfiguration.load_config("sample_config.yml")
         launcher = Launcher(config)
 
@@ -178,7 +178,7 @@ class TestLauncher(unittest.TestCase):
         for artifact in config.artifacts.values():
             launcher.launch_state._completed_deployments[artifact] = ActionResult.Success
 
-        # Build a list of expected arguements for method calls.
+        # Build a list of expected arguments for method calls.
         start_calls_sequence = []
         send_calls_sequence = []
         spec_loaders = [
