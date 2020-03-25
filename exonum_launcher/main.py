@@ -48,7 +48,7 @@ def _unload(launcher: Launcher) -> None:
                 artifact_unload_status = not launcher.explorer().is_deployed(artifact)
                 artifact_unload_status_msg = "succeed" if artifact_unload_status else "failed"
                 print(f"Artifact {artifact} -> unload status: {artifact_unload_status_msg}")
-    else:
+    elif unload_status == ActionResult.Fail:
         print(f"Artifacts unload status: {unload_status}, with error: {error_message}")
 
 

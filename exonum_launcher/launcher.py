@@ -138,7 +138,7 @@ class Launcher:
             for instance in self.config.instances
         ]
 
-        if len(config_loaders) == 0:
+        if not config_loaders:
             return
 
         config_proposal = self._supervisor.create_config_change_request(
@@ -151,7 +151,7 @@ class Launcher:
     def wait_for_start(self) -> None:
         """Waits for all the initializations to be completed."""
 
-        if len(self.launch_state.pending_configs()) == 0:
+        if not self.launch_state.pending_configs():
             return
 
         tx_hashes = self.launch_state.pending_configs()[self.config]
@@ -175,29 +175,32 @@ class Launcher:
         unload_request = self._supervisor.create_unload_request(
             list(self.config.artifacts.values()), self.config.actual_from
         )
+
         txs = self._supervisor.send_propose_config_request(unload_request)
         self.launch_state.add_pending_unload(txs)
 
     def wait_for_unload(self) -> None:
         """Wait for all unloads to be completed."""
         tx_hashes = self.launch_state.pending_unloads()
-        try:
-            self._explorer.wait_for_txs(tx_hashes)
-            tx_status, description = self._explorer.get_tx_status(tx_hashes[0])
-            if tx_status:
-                self.launch_state.unload_status = ActionResult.Success, description
-            else:
-                self.launch_state.unload_status = ActionResult.Fail, description
 
-        except NotCommittedError as error:
-            self.launch_state.unload_status = ActionResult.Fail, str(error)
+        if tx_hashes:
+            try:
+                self._explorer.wait_for_txs(tx_hashes)
+                tx_status, description = self._explorer.get_tx_status(tx_hashes[0])
+                if tx_status:
+                    self.launch_state.unload_status = ActionResult.Success, description
+                else:
+                    self.launch_state.unload_status = ActionResult.Fail, description
+
+            except NotCommittedError as error:
+                self.launch_state.unload_status = ActionResult.Fail, str(error)
 
     def migrate_all(self) -> None:
         """Migrates all services from the provided config."""
         for service_name, artifact in self.config.migrations.items():
-            migration_request = self._supervisor.create_migration_request(service_name, artifact)
+            migration_request, seed = self._supervisor.create_migration_request(service_name, artifact)
             txs = self._supervisor.send_migration_request(migration_request)
-            self.launch_state.add_pending_migration((service_name, artifact), txs)
+            self.launch_state.add_pending_migration((service_name, artifact, seed), txs)
 
     def wait_for_migration(self) -> None:
         """Waits for all migrations to be completed."""
@@ -205,18 +208,19 @@ class Launcher:
         for tx_hashes in pending_migrations.values():
             self._explorer.wait_for_txs(tx_hashes)
 
-        for (service_name, artifact), _ in pending_migrations.items():
+        for (service_name, artifact, seed), _ in pending_migrations.items():
             result = ActionResult.Fail
             description = ""
             for _ in range(0, self._explorer.RECONNECT_RETRIES):
                 try:
-                    state = self._supervisor.get_migration_state(service_name, artifact)
-                    if state["state"] == "succeed":
-                        result = ActionResult.Success
-                        description = "Success"
-                        break
-                    if "failed" in state["state"]:
-                        description = state["state"]["failed"]["error"]["description"]
+                    state = self._supervisor.get_migration_state(service_name, artifact, seed)
+                    if "state" in state:
+                        if state["state"] == "succeed":
+                            result = ActionResult.Success
+                            description = "Success"
+                            break
+                        if "failed" in state["state"]:
+                            description = state["state"]["failed"]["error"]["description"]
                     time.sleep(self._explorer.RECONNECT_INTERVAL)
                 except (RequestsConnectionError, ConnectionRefusedError, HTTPError):
                     time.sleep(self._explorer.RECONNECT_INTERVAL)
