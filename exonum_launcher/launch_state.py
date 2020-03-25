@@ -11,7 +11,7 @@ class LaunchState:
     def __init__(self) -> None:
         self._pending_configs: Dict[Configuration, List[str]] = dict()
         self._pending_deployments: Dict[Artifact, List[str]] = dict()
-        self._pending_migrations: Dict[Tuple[str, Artifact], List[str]] = dict()
+        self._pending_migrations: Dict[Tuple[str, Artifact, int], List[str]] = dict()
         self._completed_configs: Dict[Configuration, ActionResult] = dict()
         self._completed_deployments: Dict[Artifact, ActionResult] = dict()
         self._complete_migrations: Dict[str, Tuple[ActionResult, str]] = dict()
@@ -68,11 +68,11 @@ class LaunchState:
         """Returns pending unload statuses."""
         return self._pending_unloads
 
-    def add_pending_migration(self, service: Tuple[str, Artifact], txs: List[str]) -> None:
+    def add_pending_migration(self, service: Tuple[str, Artifact, int], txs: List[str]) -> None:
         """Adds a pending migration to the state"""
         self._pending_migrations[service] = txs
 
-    def pending_migrations(self) -> Dict[Tuple[str, Artifact], List[str]]:
+    def pending_migrations(self) -> Dict[Tuple[str, Artifact, int], List[str]]:
         """Returns pending migrations."""
         return self._pending_migrations
 
