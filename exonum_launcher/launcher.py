@@ -176,24 +176,27 @@ class Launcher:
             list(self.config.artifacts.values()), self.config.actual_from
         )
 
-        txs = self._supervisor.send_propose_config_request(unload_request)
-        self.launch_state.add_pending_unload(txs)
+        if unload_request:
+            txs = self._supervisor.send_propose_config_request(unload_request)
+            self.launch_state.add_pending_unload(txs)
 
     def wait_for_unload(self) -> None:
         """Wait for all unloads to be completed."""
         tx_hashes = self.launch_state.pending_unloads()
 
-        if tx_hashes:
-            try:
-                self._explorer.wait_for_txs(tx_hashes)
-                tx_status, description = self._explorer.get_tx_status(tx_hashes[0])
-                if tx_status:
-                    self.launch_state.unload_status = ActionResult.Success, description
-                else:
-                    self.launch_state.unload_status = ActionResult.Fail, description
+        if not tx_hashes:
+            return
 
-            except NotCommittedError as error:
-                self.launch_state.unload_status = ActionResult.Fail, str(error)
+        try:
+            self._explorer.wait_for_txs(tx_hashes)
+            tx_status, description = self._explorer.get_tx_status(tx_hashes[0])
+            if tx_status:
+                self.launch_state.unload_status = ActionResult.Success, description
+            else:
+                self.launch_state.unload_status = ActionResult.Fail, description
+
+        except NotCommittedError as error:
+            self.launch_state.unload_status = ActionResult.Fail, str(error)
 
     def migrate_all(self) -> None:
         """Migrates all services from the provided config."""

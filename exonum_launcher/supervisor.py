@@ -72,11 +72,8 @@ class Supervisor:
         """Deinitializes the Supervisor by deinitializing the Protobuf Loader."""
         self._loader.deinitialize()
 
-    def _post_to_supervisor(self, endpoint: str, message: Optional[Message], private: bool = True) -> List[str]:
+    def _post_to_supervisor(self, endpoint: str, message: Message, private: bool = True) -> List[str]:
         responses: List[str] = list()
-
-        if not message:
-            return responses
 
         data = message.SerializeToString()
 
@@ -104,7 +101,7 @@ class Supervisor:
         )
         return response.json()
 
-    def create_deploy_request(self, artifact: Artifact, spec_loader: RuntimeSpecLoader) -> Optional[Message]:
+    def create_deploy_request(self, artifact: Artifact, spec_loader: RuntimeSpecLoader) -> Message:
         """Creates a deploy request for given artifact."""
         assert self._service_module is not None
         deploy_request = self._service_module.DeployRequest()
@@ -118,7 +115,7 @@ class Supervisor:
 
         return deploy_request
 
-    def create_migration_request(self, service_name: str, artifact: Artifact) -> Tuple[Optional[Message], int]:
+    def create_migration_request(self, service_name: str, artifact: Artifact) -> Tuple[Message, int]:
         """Creates a migration request for given service."""
         assert self._service_module is not None
         migration_request = self._service_module.MigrationRequest()
@@ -190,7 +187,7 @@ class Supervisor:
         instances: List[Instance],
         config_loaders: List[InstanceSpecLoader],
         actual_from: int,
-    ) -> Optional[Message]:
+    ) -> Message:
         """Creates a configuration change request."""
 
         if self._mode != "simple":
@@ -360,15 +357,15 @@ class Supervisor:
         freeze_service.instance_id = instance.instance_id
         change.freeze_service.CopyFrom(freeze_service)
 
-    def send_deploy_request(self, deploy_request: Optional[Message]) -> List[str]:
+    def send_deploy_request(self, deploy_request: Message) -> List[str]:
         """Sends deploy request to the Supervisor."""
         return self._post_to_supervisor("deploy-artifact", deploy_request)
 
-    def send_propose_config_request(self, config_proposal: Optional[Message]) -> List[str]:
+    def send_propose_config_request(self, config_proposal: Message) -> List[str]:
         """Sends propose config request to the Supervisor."""
         return self._post_to_supervisor("propose-config", config_proposal)
 
-    def send_migration_request(self, migration_request: Optional[Message]) -> List[str]:
+    def send_migration_request(self, migration_request: Message) -> List[str]:
         """Sends migration request to the Supervisor"""
         return self._post_to_supervisor("migrate", migration_request)
 
