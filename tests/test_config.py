@@ -1,8 +1,8 @@
 # pylint: disable=missing-docstring, protected-access
 
-import unittest
-import os
 import copy
+import os
+import unittest
 
 from exonum_launcher.configuration import Configuration
 
@@ -56,17 +56,17 @@ class TestConfiguration(unittest.TestCase):
 
         cryptocurrency = config.artifacts["cryptocurrency"]
         self.assertEqual(cryptocurrency.name, "exonum-cryptocurrency-advanced")
-        self.assertEqual(cryptocurrency.version, "0.12.0")
+        self.assertEqual(cryptocurrency.version, "1.0.0-rc.2")
         self.assertEqual(cryptocurrency.runtime, "rust")
         self.assertEqual(cryptocurrency.runtime_id, 0)
         self.assertEqual(cryptocurrency.deadline_height, 10000)
         self.assertEqual(cryptocurrency.spec, {})
-        self.assertEqual(cryptocurrency.deploy, True)
+        self.assertEqual(cryptocurrency.action, "deploy")
 
         self.assertTrue("should_not_be_deployed" in config.artifacts)
 
         should_not_be_deployed = config.artifacts["should_not_be_deployed"]
-        self.assertEqual(should_not_be_deployed.deploy, False)
+        self.assertEqual(should_not_be_deployed.action, "none")
 
         self.assertEqual(len(config.instances), 2)
 
@@ -97,6 +97,16 @@ class TestConfiguration(unittest.TestCase):
         expected_layout = {
             "runtime": {"sample": "tests.spec_loaders.TestRuntimeSpecLoader"},
             "artifact": {"cryptocurrency": "tests.spec_loaders.TestInstanceSpecLoader"},
+        }
+
+        self.assertEqual(config.plugins, expected_layout)
+
+    def test_parse_plugins_runtime_only(self) -> None:
+        config = self.load_config("custom_plugins_runtime_only.yml")
+
+        expected_layout = {
+            "runtime": {"sample3": "tests.spec_loaders.TestRuntimeSpecLoader"},
+            "artifact": {},
         }
 
         self.assertEqual(config.plugins, expected_layout)

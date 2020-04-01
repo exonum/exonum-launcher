@@ -1,16 +1,16 @@
 # pylint: disable=missing-docstring, protected-access, no-self-use
 
 import unittest
-from unittest.mock import MagicMock, call
+from unittest.mock import call, MagicMock
+
 from requests import Response
 
 from exonum_launcher.action_result import ActionResult
-from exonum_launcher.supervisor import Supervisor
 from exonum_launcher.launcher import Launcher
 from exonum_launcher.runtimes.rust import RustSpecLoader
-
+from exonum_launcher.supervisor import Supervisor
+from .spec_loaders import TestInstanceSpecLoader, TestRuntimeSpecLoader
 from .test_config import TestConfiguration
-from .spec_loaders import TestRuntimeSpecLoader, TestInstanceSpecLoader
 
 
 class MockDefaultInstanceSpecLoader:
@@ -57,7 +57,7 @@ class TestLauncher(unittest.TestCase):
         # Setup mocks.
         launcher._supervisor.initialize = MagicMock(return_value=None)  # type: ignore
         for client in launcher.clients:
-            client.public_api.stats = MagicMock(return_value=response)
+            client.private_api.get_stats = MagicMock(return_value=response)
 
         # Initialize launcher.
         launcher.initialize()
@@ -65,7 +65,7 @@ class TestLauncher(unittest.TestCase):
         # Check that expected methods are called
         launcher._supervisor.initialize.assert_called()  # type: ignore
         for client in launcher.clients:
-            client.public_api.stats.assert_called()
+            client.private_api.get_stats.assert_called()
 
     def test_deinitialize(self) -> None:
         """Tests that deinitialize deinitializes Supervisor."""
@@ -79,7 +79,7 @@ class TestLauncher(unittest.TestCase):
         # Setup init mocks.
         launcher._supervisor.initialize = MagicMock(return_value=None)  # type: ignore
         for client in launcher.clients:
-            client.public_api.stats = MagicMock(return_value=response)
+            client.private_api.get_stats = MagicMock(return_value=response)
 
         # Initialize launcher.
         launcher.initialize()
@@ -127,17 +127,25 @@ class TestLauncher(unittest.TestCase):
         self.assertEqual(type(launcher._runtime_plugins["sample"]), TestRuntimeSpecLoader)
         self.assertEqual(type(launcher._artifact_plugins[cryptocurrency]), TestInstanceSpecLoader)
 
+    def test_load_plugins_runtime_only(self) -> None:
+        """Tests that plugins are loaded as expected if only the runtime plugins are present: no artifact plugins"""
+        config = TestConfiguration.load_config("custom_plugins_runtime_only.yml")
+
+        launcher = Launcher(config)
+        self.assertEqual(type(launcher._runtime_plugins["rust"]), RustSpecLoader)
+        self.assertEqual(type(launcher._runtime_plugins["sample3"]), TestRuntimeSpecLoader)
+
     def test_deploy_all(self) -> None:
         """Tests that deploy method uses supervisor to deploy all artifacts from config."""
         config = TestConfiguration.load_config("sample_config.yml")
         launcher = Launcher(config)
 
-        # Build a list of expected arguements for method calls.
+        # Build a list of expected arguments for method calls.
         create_calls_sequence = []
         send_calls_sequence = []
         for artifact in config.artifacts.values():
             # Skip artifacts that should not be deployed
-            if not artifact.deploy:
+            if artifact.action != "deploy":
                 continue
 
             create_calls_sequence.append(call(artifact, launcher._runtime_plugins[artifact.runtime]))
@@ -156,13 +164,13 @@ class TestLauncher(unittest.TestCase):
 
         # Check that results were added to the pending deployments.
         for artifact in config.artifacts.values():
-            if artifact.deploy:
+            if artifact.action == "deploy":
                 self.assertEqual(launcher.launch_state._pending_deployments[artifact], ["123"])
             else:
                 self.assertTrue(artifact not in launcher.launch_state._pending_deployments)
 
     def test_start_all(self) -> None:
-        """Tests that deploy method uses supervisor to deploy all artifacts from config."""
+        """Tests that start method uses supervisor to start all services from the config."""
         config = TestConfiguration.load_config("sample_config.yml")
         launcher = Launcher(config)
 
@@ -170,7 +178,7 @@ class TestLauncher(unittest.TestCase):
         for artifact in config.artifacts.values():
             launcher.launch_state._completed_deployments[artifact] = ActionResult.Success
 
-        # Build a list of expected arguements for method calls.
+        # Build a list of expected arguments for method calls.
         start_calls_sequence = []
         send_calls_sequence = []
         spec_loaders = [

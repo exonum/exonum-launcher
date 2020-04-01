@@ -3,27 +3,26 @@ networks:
     ssl: false
     public-api-port: 8080
     private-api-port: 8081
-    
+
   - host: "8.8.8.8"
     ssl: false
     public-api-port: 8080
     private-api-port: 8081
 
 deadline_height: 10000
-
 supervisor_mode: "decentralized"
 
 artifacts:
   cryptocurrency:
     runtime: rust
     name: "exonum-cryptocurrency-advanced"
-    version: "0.12.0"
+    version: "1.0.0-rc.2"
+    action: "deploy"
   should_not_be_deployed:
     runtime: rust
     name: "should-not-be-deployed"
-    version: "0.12.0"
-    deploy: false
-  
+    version: "1.0.0-rc.2"
+
 instances:
   xnm-token:
     artifact: cryptocurrency

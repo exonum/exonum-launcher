@@ -1,6 +1,6 @@
 """Module with RuntimeSpecLoader class"""
 import abc
-from typing import Dict, Any
+from typing import Any, Dict
 
 
 class RuntimeSpecLoader(metaclass=abc.ABCMeta):

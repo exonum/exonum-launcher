@@ -1,14 +1,15 @@
 """Module encapsulating the interaction with the supervisor."""
-from typing import List, Optional, Any
-import json
+import random
+from typing import Any, List, Optional, Tuple
+from google.protobuf.message import Message
 
 from exonum_client import ExonumClient
 from exonum_client.module_manager import ModuleManager
 
 from .configuration import Artifact, Instance
+from .explorer import Explorer
 from .instances import InstanceSpecLoader
 from .runtimes import RuntimeSpecLoader
-from .explorer import Explorer
 
 
 # pylint: disable=too-many-instance-attributes
@@ -71,16 +72,16 @@ class Supervisor:
         """Deinitializes the Supervisor by deinitializing the Protobuf Loader."""
         self._loader.deinitialize()
 
-    def _post_to_supervisor(self, endpoint: str, message: bytes, private: bool = True) -> List[str]:
-        message_data = message.hex()
-        data = json.dumps(message_data)
+    def _post_to_supervisor(self, endpoint: str, message: Message, private: bool = True) -> List[str]:
+        responses: List[str] = list()
 
-        responses = []
+        data = message.SerializeToString()
+
         for client in self._clients:
             supervisor_api = (
                 client.service_private_api("supervisor") if private else client.service_public_api("supervisor")
             )
-            response = supervisor_api.post_service(endpoint, data)
+            response = supervisor_api.post_service(endpoint, data, data_format="binary")
             responses.append(response.json())
 
         return responses
@@ -91,7 +92,16 @@ class Supervisor:
 
         return int(response.json())
 
-    def create_deploy_request(self, artifact: Artifact, spec_loader: RuntimeSpecLoader) -> bytes:
+    def get_migration_state(self, service: str, artifact: Artifact, seed: int) -> Any:
+        """Retrieves a state of the migration for the service."""
+        height = artifact.deadline_height
+        supervisor_private_api = self._main_client.service_private_api("supervisor")
+        response = supervisor_private_api.get_service(
+            f"migration-status?service={service}&new_artifact={artifact}&deadline_height={height}&seed={seed}"
+        )
+        return response.json()
+
+    def create_deploy_request(self, artifact: Artifact, spec_loader: RuntimeSpecLoader) -> Message:
         """Creates a deploy request for given artifact."""
         assert self._service_module is not None
         deploy_request = self._service_module.DeployRequest()
@@ -101,12 +111,54 @@ class Supervisor:
         deploy_request.artifact.version = artifact.version
         deploy_request.deadline_height = artifact.deadline_height
         deploy_request.spec = spec_loader.encode_spec(artifact.spec)
+        deploy_request.seed = _get_seed()
 
-        return deploy_request.SerializeToString()
+        return deploy_request
+
+    def create_migration_request(self, service_name: str, artifact: Artifact) -> Tuple[Message, int]:
+        """Creates a migration request for given service."""
+        assert self._service_module is not None
+        migration_request = self._service_module.MigrationRequest()
+        seed = _get_seed()
+
+        migration_request.service = service_name
+        migration_request.new_artifact.runtime_id = artifact.runtime_id
+        migration_request.new_artifact.version = artifact.version
+        migration_request.new_artifact.name = artifact.name
+        migration_request.deadline_height = artifact.deadline_height
+        migration_request.seed = seed
+
+        return migration_request, seed
+
+    def create_unload_request(self, artifacts: List[Artifact], actual_from: int) -> Optional[Message]:
+        """Creates unload request for the given artifact."""
+        assert self._service_module is not None
+
+        artifacts_to_unload = list(filter(lambda a: a.action == "unload", artifacts))
+
+        if not artifacts_to_unload:
+            return None
+
+        unload_artifact_request = self._service_module.ConfigPropose()
+        unload_artifact_request.configuration_number = self._get_configuration_number()
+        unload_artifact_request.actual_from = actual_from
+
+        for artifact in artifacts_to_unload:
+            unload_artifact = self._service_module.UnloadArtifact()
+            unload_artifact.artifact_id.runtime_id = artifact.runtime_id
+            unload_artifact.artifact_id.name = artifact.name
+            unload_artifact.artifact_id.version = artifact.version
+
+            config_change = self._service_module.ConfigChange()
+            config_change.unload_artifact.CopyFrom(unload_artifact)
+
+            unload_artifact_request.changes.append(config_change)
+
+        return unload_artifact_request
 
     def create_start_instances_request(
         self, instances: List[Instance], config_loaders: List[InstanceSpecLoader], actual_from: int
-    ) -> bytes:
+    ) -> Optional[Message]:
         """Creates a start instance request for given list of instances."""
         assert self._service_module is not None
         configuration_number = self._get_configuration_number()
@@ -127,8 +179,7 @@ class Supervisor:
 
             config_change.start_service.CopyFrom(start_service)
             start_request.changes.append(config_change)
-
-        return start_request.SerializeToString()
+        return start_request
 
     def create_config_change_request(
         self,
@@ -136,18 +187,17 @@ class Supervisor:
         instances: List[Instance],
         config_loaders: List[InstanceSpecLoader],
         actual_from: int,
-    ) -> bytes:
+    ) -> Message:
         """Creates a configuration change request."""
 
         if self._mode != "simple":
             raise RuntimeError("Changing configuration for decentralized supervisor is not yet supported")
 
         assert self._service_module is not None
-        configuration_number = self._get_configuration_number()
 
         config_change_request = self._service_module.ConfigPropose()
+        config_change_request.configuration_number = self._get_configuration_number()
         config_change_request.actual_from = actual_from
-        config_change_request.configuration_number = configuration_number
 
         if consensus is not None:
             config_change = self._service_module.ConfigChange()
@@ -165,12 +215,14 @@ class Supervisor:
                 self._build_stop_service_change(instance, config_change)
             elif instance.action == "resume":
                 self._build_resume_service_change(instance, config_loader, config_change)
+            elif instance.action == "freeze":
+                self._build_freeze_service_change(instance, config_change)
             else:
                 raise RuntimeError(f"Unknown action type '{instance.action}' for instance '{instance}'")
 
             config_change_request.changes.append(config_change)
 
-        return config_change_request.SerializeToString()
+        return config_change_request
 
     def _build_consensus_change(self, consensus: Any, change: Any) -> None:
         """Creates a ConfigChange for consensus config."""
@@ -178,11 +230,11 @@ class Supervisor:
         assert self._service_module is not None
 
         blockchain_module = ModuleManager.import_service_module(
-            self._supervisor_artifact_name, self._supervisor_artifact_version, "blockchain"
+            self._supervisor_artifact_name, self._supervisor_artifact_version, "exonum.blockchain"
         )
 
         types_module = ModuleManager.import_service_module(
-            self._supervisor_artifact_name, self._supervisor_artifact_version, "types"
+            self._supervisor_artifact_name, self._supervisor_artifact_version, "exonum.crypto.types"
         )
 
         new_consensus_config = blockchain_module.Config()
@@ -255,7 +307,7 @@ class Supervisor:
             instance_id = explorer.get_instance_id(instance)
 
             if instance_id is None:
-                raise RuntimeError(f"Instance {instance} doesn't seem to be deployed, can't change configuration")
+                raise RuntimeError(f"Instance {instance} does not seem to be deployed, it can't be stopped")
 
             instance.instance_id = instance_id
 
@@ -275,13 +327,9 @@ class Supervisor:
             instance_id = explorer.get_instance_id(instance)
 
             if instance_id is None:
-                raise RuntimeError(f"Instance {instance} doesn't seem to be deployed, can't change configuration")
+                raise RuntimeError(f"Instance {instance} does not seem to be deployed, it can't be resumed")
 
             instance.instance_id = instance_id
-
-        resume_service.artifact.runtime_id = instance.artifact.runtime_id
-        resume_service.artifact.name = instance.artifact.name
-        resume_service.artifact.version = instance.artifact.version
 
         resume_service.instance_id = instance.instance_id
 
@@ -290,10 +338,37 @@ class Supervisor:
 
         change.resume_service.CopyFrom(resume_service)
 
-    def send_deploy_request(self, deploy_request: bytes) -> List[str]:
+    def _build_freeze_service_change(self, instance: Instance, change: Any) -> None:
+        """Creates a ConfigChange for freezing a service."""
+
+        assert self._service_module is not None
+        freeze_service = self._service_module.FreezeService()
+
+        if instance.instance_id is None:
+            # Instance ID is currently unknown, retrieve it.
+            explorer = Explorer(self._main_client)
+            instance_id = explorer.get_instance_id(instance)
+
+            if instance_id is None:
+                raise RuntimeError(f"Instance {instance} does not seem to be deployed, it can't be frozen")
+
+            instance.instance_id = instance_id
+
+        freeze_service.instance_id = instance.instance_id
+        change.freeze_service.CopyFrom(freeze_service)
+
+    def send_deploy_request(self, deploy_request: Message) -> List[str]:
         """Sends deploy request to the Supervisor."""
         return self._post_to_supervisor("deploy-artifact", deploy_request)
 
-    def send_propose_config_request(self, config_proposal: bytes) -> List[str]:
+    def send_propose_config_request(self, config_proposal: Message) -> List[str]:
         """Sends propose config request to the Supervisor."""
         return self._post_to_supervisor("propose-config", config_proposal)
+
+    def send_migration_request(self, migration_request: Message) -> List[str]:
+        """Sends migration request to the Supervisor"""
+        return self._post_to_supervisor("migrate", migration_request)
+
+
+def _get_seed() -> int:
+    return random.getrandbits(64)

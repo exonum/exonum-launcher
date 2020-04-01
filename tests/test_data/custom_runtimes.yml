@@ -19,9 +19,11 @@ artifacts:
     runtime: other_example
     name: "other-example-name"
     version: "0.0.0"
-  
+
 instances:
   xnm-token:
     artifact: "cryptocurrency"
+    action: start
   nnm-token:
     artifact: "other_cryptocurrency"
+    action: start

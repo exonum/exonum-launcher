@@ -1,16 +1,18 @@
 """Main module of the Exonum Launcher."""
 import importlib
-from typing import Any, List, Dict, Optional
+import time
+from typing import Any, Dict, List, Optional
+from requests.exceptions import ConnectionError as RequestsConnectionError, HTTPError
 
 from exonum_client import ExonumClient
 
 from .action_result import ActionResult
 from .configuration import Artifact, Configuration
-from .runtimes import RuntimeSpecLoader, RustSpecLoader
+from .explorer import Explorer, NotCommittedError
 from .instances import DefaultInstanceSpecLoader, InstanceSpecLoader
-from .supervisor import Supervisor
-from .explorer import Explorer
 from .launch_state import LaunchState
+from .runtimes import RuntimeSpecLoader, RustSpecLoader
+from .supervisor import Supervisor
 
 
 class Launcher:
@@ -31,7 +33,7 @@ class Launcher:
         # Load artifact plugins.
         self._artifact_plugins: Dict[Artifact, InstanceSpecLoader] = self._load_artifact_plugins()
 
-        # Create supervsior and explorer.
+        # Create supervisor and explorer.
         self._supervisor = Supervisor(self.config.supervisor_mode, self.clients)
         self._explorer = Explorer(self.clients[0])
 
@@ -82,7 +84,7 @@ class Launcher:
     def initialize(self) -> None:
         """Initializes the Launcher by initializing the Supervisor and checking that clients are valid."""
         for client in self.clients:
-            if client.public_api.stats().status_code != 200:
+            if client.private_api.get_stats().status_code != 200:
                 network = (
                     f"{client.schema}://{client.hostname}; ports: {client.public_api_port} / {client.private_api_port}"
                 )
@@ -91,7 +93,7 @@ class Launcher:
         self._supervisor.initialize()
 
     def deinitialize(self) -> None:
-        """Deinitializes the Launcher by deinitializing the Supervisor."""
+        """De-initializes the Launcher by de-initializing the Supervisor."""
         self._supervisor.deinitialize()
 
     def add_runtime_spec_loader(self, runtime: str, spec_loader: RuntimeSpecLoader) -> None:
@@ -111,15 +113,12 @@ class Launcher:
     def deploy_all(self) -> None:
         """Deploys all the services from the provided config."""
         for artifact in self.config.artifacts.values():
-            if not artifact.deploy:
-                # Skip artifact that we should not deploy
+            if artifact.action != "deploy":
                 continue
 
             spec_loader = self._runtime_plugins[artifact.runtime]
             deploy_request = self._supervisor.create_deploy_request(artifact, spec_loader)
-
             txs = self._supervisor.send_deploy_request(deploy_request)
-
             self.launch_state.add_pending_deploy(artifact, txs)
 
     def wait_for_deploy(self) -> None:
@@ -138,6 +137,10 @@ class Launcher:
             self._artifact_plugins.get(instance.artifact, DefaultInstanceSpecLoader())
             for instance in self.config.instances
         ]
+
+        if not config_loaders:
+            return
+
         config_proposal = self._supervisor.create_config_change_request(
             self.config.consensus, self.config.instances, config_loaders, self.config.actual_from
         )
@@ -147,6 +150,10 @@ class Launcher:
 
     def wait_for_start(self) -> None:
         """Waits for all the initializations to be completed."""
+
+        if not self.launch_state.pending_configs():
+            return
+
         tx_hashes = self.launch_state.pending_configs()[self.config]
 
         self._explorer.wait_for_txs(tx_hashes)
@@ -162,6 +169,65 @@ class Launcher:
                 break
 
         self.launch_state.complete_config(self.config, result)
+
+    def unload_all(self) -> None:
+        """Unload all artifacts marked as unloaded."""
+        unload_request = self._supervisor.create_unload_request(
+            list(self.config.artifacts.values()), self.config.actual_from
+        )
+
+        if unload_request:
+            txs = self._supervisor.send_propose_config_request(unload_request)
+            self.launch_state.add_pending_unload(txs)
+
+    def wait_for_unload(self) -> None:
+        """Wait for all unloads to be completed."""
+        tx_hashes = self.launch_state.pending_unloads()
+
+        if not tx_hashes:
+            return
+
+        try:
+            self._explorer.wait_for_txs(tx_hashes)
+            tx_status, description = self._explorer.get_tx_status(tx_hashes[0])
+            if tx_status:
+                self.launch_state.unload_status = ActionResult.Success, description
+            else:
+                self.launch_state.unload_status = ActionResult.Fail, description
+
+        except NotCommittedError as error:
+            self.launch_state.unload_status = ActionResult.Fail, str(error)
+
+    def migrate_all(self) -> None:
+        """Migrates all services from the provided config."""
+        for service_name, artifact in self.config.migrations.items():
+            migration_request, seed = self._supervisor.create_migration_request(service_name, artifact)
+            txs = self._supervisor.send_migration_request(migration_request)
+            self.launch_state.add_pending_migration((service_name, artifact, seed), txs)
+
+    def wait_for_migration(self) -> None:
+        """Waits for all migrations to be completed."""
+        pending_migrations = self.launch_state.pending_migrations()
+        for tx_hashes in pending_migrations.values():
+            self._explorer.wait_for_txs(tx_hashes)
+
+        for (service_name, artifact, seed), _ in pending_migrations.items():
+            result = ActionResult.Fail
+            description = ""
+            for _ in range(0, self._explorer.RECONNECT_RETRIES):
+                try:
+                    state = self._supervisor.get_migration_state(service_name, artifact, seed)
+                    if "state" in state:
+                        if state["state"] == "succeed":
+                            result = ActionResult.Success
+                            description = "Success"
+                            break
+                        if "failed" in state["state"]:
+                            description = state["state"]["failed"]["error"]["description"]
+                    time.sleep(self._explorer.RECONNECT_INTERVAL)
+                except (RequestsConnectionError, ConnectionRefusedError, HTTPError):
+                    time.sleep(self._explorer.RECONNECT_INTERVAL)
+            self.launch_state.complete_migration(service_name, (result, description))
 
     def explorer(self) -> Explorer:
         """Returns used explorer"""

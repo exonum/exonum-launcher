@@ -1,6 +1,6 @@
 # pylint: disable=missing-docstring, protected-access
 import unittest
-from typing import Dict, Any
+from typing import Any, Dict
 
 from exonum_client.protobuf_loader import ProtobufLoader
 from exonum_launcher.configuration import Instance

@@ -1,6 +1,6 @@
 """Module encapsulating the interaction with the Explorer."""
 
-from typing import Optional, List
+from typing import Optional, List, Tuple
 import time
 
 from requests.exceptions import ConnectionError as RequestsConnectionError, HTTPError
@@ -29,12 +29,16 @@ class Explorer:
     def __init__(self, client: ExonumClient):
         self._client = client
 
-    def check_deployed(self, artifact: Artifact) -> bool:
+    def is_deployed(self, artifact: Artifact) -> bool:
         """Returns True if artifact is deployed. Otherwise returns False."""
         dispatcher_info = self._client.public_api.available_services().json()
 
         for value in dispatcher_info["artifacts"]:
-            if value["runtime_id"] == artifact.runtime_id and value["name"] == artifact.name:
+            if (
+                value["runtime_id"] == artifact.runtime_id
+                and value["name"] == artifact.name
+                and value["version"] == artifact.version
+            ):
                 return True
 
         return False
@@ -51,20 +55,30 @@ class Explorer:
 
         return None
 
+    def get_tx_status(self, tx_hash: str) -> Tuple[bool, str]:
+        """Returns status of the transaction by its hash."""
+        response = self._client.public_api.get_tx_info(tx_hash)
+        response.raise_for_status()
+        info = response.json()
+        tx_status_description = "OK"
+
+        if info["type"] == "committed":
+            status = info["status"]
+            if status["type"] == "success":
+                return True, tx_status_description
+
+            tx_status_description = status["description"]
+
+        return False, tx_status_description
+
     def wait_for_tx(self, tx_hash: str) -> None:
         """Waits until the tx is committed."""
         success = False
+        description = "uncommitted"
         for _ in range(self.RECONNECT_RETRIES):
             try:
-                response = self._client.public_api.get_tx_info(tx_hash)
-                response.raise_for_status()
-                info = response.json()
-                if info["type"] == "committed":
-                    status = info["status"]
-                    if status["type"] != "success":
-                        raise ExecutionFailError(f"Transaction execution failed: {status}")
-
-                    success = True
+                success, description = self.get_tx_status(tx_hash)
+                if success:
                     break
 
                 with self._client.create_subscriber("blocks") as subscriber:
@@ -75,7 +89,7 @@ class Explorer:
                 continue
 
         if not success:
-            raise NotCommittedError("Tx [{}] was not committed.".format(tx_hash))
+            raise NotCommittedError(f"Tx [{tx_hash}] was not committed or committed with error: {description}")
 
     def wait_for_txs(self, txs: List[str]) -> None:
         """Waits until every transaction from the list is committed."""
@@ -85,12 +99,11 @@ class Explorer:
     def wait_for_deploy(self, artifact: Artifact) -> ActionResult:
         """Waits for all the deployment of artifact to be completed."""
         for _ in range(self.RECONNECT_RETRIES):
-            if self.check_deployed(artifact):
+            if self.is_deployed(artifact):
                 return ActionResult.Success
 
             with self._client.create_subscriber("blocks") as subscriber:
-                # TODO Temporary solution because it currently it takes up to 10 seconds to
-                # update dispatcher info.
+                # TODO Temporary solution because currently it takes up to 10 seconds to update dispatcher info.
                 time.sleep(2)
                 subscriber.wait_for_new_event()
 
