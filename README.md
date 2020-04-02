@@ -3,9 +3,9 @@
 **Status:**
 [![Travis Build Status](https://travis-ci.org/exonum/exonum-launcher.svg?branch=master)](https://travis-ci.org/exonum/exonum-launcher)
 
-Exonum Dynamic Service Launcher is a tool to manage the Exonum blockchain.
+Exonum Dynamic Service Launcher is a tool to manage the lifecycle of the Exonum services.
 
-This tool is capable of deploying artifacts, managing running service, and
+This tool is capable of deploying artifacts, managing running services, and
 changing the configuration of the Exonum blockchain.
 
 ## Usage
@@ -62,13 +62,13 @@ deadline_height: 10000
 artifacts:
   cryptocurrency:
     runtime: rust
-    name: "exonum-cryptocurrency-advanced:1.0.0-rc.2"
+    name: "exonum-cryptocurrency-advanced:0.1.0"
     action: deploy
   
   # Example of artifact that should not be deployed
   example_artifact:
     runtime: rust
-    name: "exonum-cryptocurrency-advanced:1.0.0-rc.2"
+    name: "exonum-cryptocurrency-advanced:0.1.0"
     
 instances:
   xnm-token:
@@ -92,10 +92,11 @@ instances:
 
 - `deploy` - to deploy an artifact.
 - `unload` - to unload deployed artifact.
+- `none` - to do nothing (default action).
 
 `action` field in the `instances` section can be one of the following:
 
-- `start` - to start a new instance;
+- `start` - to start a new instance (default action);
 - `config` - to change a configuration of existing service (only in `simple` supervisor mode!);
 - `stop` - to stop a running service.
 - `freeze` - to freeze a running service.
