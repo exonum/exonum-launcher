@@ -10,9 +10,9 @@ supervisor_mode: "simple"
 artifacts:
   cryptocurrency:
     runtime: rust
-    name: "exonum-cryptocurrency-advanced"
-    version: "1.0.0-rc.2"
-    action: deploy
+    name: "exonum-cryptocurrency"
+    version: "0.1.0"
+    action: none
 
 instances:
   xnm-token:

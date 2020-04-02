@@ -55,8 +55,8 @@ class TestConfiguration(unittest.TestCase):
         self.assertTrue("cryptocurrency" in config.artifacts)
 
         cryptocurrency = config.artifacts["cryptocurrency"]
-        self.assertEqual(cryptocurrency.name, "exonum-cryptocurrency-advanced")
-        self.assertEqual(cryptocurrency.version, "1.0.0-rc.2")
+        self.assertEqual(cryptocurrency.name, "exonum-cryptocurrency")
+        self.assertEqual(cryptocurrency.version, "0.1.0")
         self.assertEqual(cryptocurrency.runtime, "rust")
         self.assertEqual(cryptocurrency.runtime_id, 0)
         self.assertEqual(cryptocurrency.deadline_height, 10000)
