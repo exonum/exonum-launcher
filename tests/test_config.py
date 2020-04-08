@@ -104,10 +104,7 @@ class TestConfiguration(unittest.TestCase):
     def test_parse_plugins_runtime_only(self) -> None:
         config = self.load_config("custom_plugins_runtime_only.yml")
 
-        expected_layout = {
-            "runtime": {"sample3": "tests.spec_loaders.TestRuntimeSpecLoader"},
-            "artifact": {},
-        }
+        expected_layout = {"runtime": {"sample3": "tests.spec_loaders.TestRuntimeSpecLoader"}, "artifact": {}}
 
         self.assertEqual(config.plugins, expected_layout)
 

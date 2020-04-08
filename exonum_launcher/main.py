@@ -56,10 +56,10 @@ def _deploy(launcher: Launcher, results: Dict[str, Any]) -> None:
     launcher.deploy_all()
     launcher.wait_for_deploy()
 
-    for artifact in launcher.launch_state.completed_deployments():
-        deployed = launcher.explorer().is_deployed(artifact)
-        results["artifacts"][artifact] = deployed
-        status_description = "succeed" if deployed else "failed"
+    for artifact, (result, description) in launcher.launch_state.completed_deployments().items():
+        deployed = launcher.explorer().is_deployed(artifact) and result == ActionResult.Success
+        status_description = "succeed" if deployed else description
+        results["artifacts"][artifact] = status_description
         print(f"Artifact {artifact} -> deploy status: {status_description}")
 
 
@@ -75,13 +75,16 @@ def _migration(launcher: Launcher) -> None:
 
 
 def _start(launcher: Launcher, results: Dict[str, Any]) -> None:
-    launcher.start_all()
+    # Artifacts with erroneous deploy status
+    skipped_artifacts = [artifact for artifact, description in results["artifacts"].items() if description != "succeed"]
+    launcher.start_all(skipped_artifacts)
     launcher.wait_for_start()
 
     config_state = launcher.launch_state.get_completed_config_state(launcher.config)
 
     if config_state == ActionResult.Fail:
         print("Applying of config -> FAIL")
+        return
 
     for instance in launcher.config.instances:
         if instance.action == "start":

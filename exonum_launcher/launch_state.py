@@ -13,7 +13,7 @@ class LaunchState:
         self._pending_deployments: Dict[Artifact, List[str]] = dict()
         self._pending_migrations: Dict[Tuple[str, Artifact, int], List[str]] = dict()
         self._completed_configs: Dict[Configuration, ActionResult] = dict()
-        self._completed_deployments: Dict[Artifact, ActionResult] = dict()
+        self._completed_deployments: Dict[Artifact, Tuple[ActionResult, str]] = dict()
         self._complete_migrations: Dict[str, Tuple[ActionResult, str]] = dict()
         self._pending_unloads: List[str] = list()
         self.unload_status = ActionResult.Unknown, ""
@@ -34,9 +34,9 @@ class LaunchState:
         """Returns a copy of pending initializations dict."""
         return dict(self._pending_configs)
 
-    def complete_deploy(self, artifact: Artifact, result: ActionResult) -> None:
+    def complete_deploy(self, artifact: Artifact, result: ActionResult, description: str) -> None:
         """Completes the deploy process."""
-        self._completed_deployments[artifact] = result
+        self._completed_deployments[artifact] = result, description
         del self._pending_deployments[artifact]
 
     def complete_config(self, config: Configuration, result: ActionResult) -> None:
@@ -45,7 +45,7 @@ class LaunchState:
         if config in self._pending_configs:
             del self._pending_configs[config]
 
-    def completed_deployments(self) -> Dict[Artifact, ActionResult]:
+    def completed_deployments(self) -> Dict[Artifact, Tuple[ActionResult, str]]:
         """Returns a copy of completed deployments dict."""
         return dict(self._completed_deployments)
 
