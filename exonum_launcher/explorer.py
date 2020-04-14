@@ -1,5 +1,6 @@
 """Module encapsulating the interaction with the Explorer."""
 
+from enum import auto as enum_auto, Enum
 from typing import Optional, List, Tuple
 import time
 
@@ -16,6 +17,15 @@ class NotCommittedError(Exception):
 
 class ExecutionFailError(Exception):
     """Error raised when transaction execution fails."""
+
+
+class TxStatus(Enum):
+    """Denotes transaction status."""
+
+    Success = enum_auto()
+    Error = enum_auto()
+    NotCommitted = enum_auto()
+    Unknown = enum_auto()
 
 
 class Explorer:
@@ -55,41 +65,36 @@ class Explorer:
 
         return None
 
-    def get_tx_status(self, tx_hash: str) -> Tuple[bool, str]:
+    def get_tx_status(self, tx_hash: str) -> Tuple[TxStatus, str]:
         """Returns status of the transaction by its hash."""
         response = self._client.public_api.get_tx_info(tx_hash)
         response.raise_for_status()
         info = response.json()
-        tx_status_description = "OK"
-
         if info["type"] == "committed":
             status = info["status"]
             if status["type"] == "success":
-                return True, tx_status_description
+                return TxStatus.Success, "OK"
 
-            tx_status_description = status["description"]
+            return TxStatus.Error, status["description"]
 
-        return False, tx_status_description
+        return TxStatus.NotCommitted, "not committed"
 
     def wait_for_tx(self, tx_hash: str) -> None:
         """Waits until the tx is committed."""
-        success = False
-        description = "uncommitted"
         for _ in range(self.RECONNECT_RETRIES):
             try:
-                success, description = self.get_tx_status(tx_hash)
-                if success:
-                    break
-
+                status, description = self.get_tx_status(tx_hash)
+                if status == TxStatus.Success:
+                    return
+                if status == TxStatus.Error:
+                    raise ExecutionFailError(f"Tx [{tx_hash}] was committed with error: {description}")
                 with self._client.create_subscriber("blocks") as subscriber:
                     subscriber.wait_for_new_event()
             except (RequestsConnectionError, ConnectionRefusedError, HTTPError):
                 # Exonum API server may be rebooting. Wait for it.
                 time.sleep(self.RECONNECT_INTERVAL)
                 continue
-
-        if not success:
-            raise NotCommittedError(f"Tx [{tx_hash}] was not committed or committed with error: {description}")
+        raise NotCommittedError(f"Tx [{tx_hash}] was not committed")
 
     def wait_for_txs(self, txs: List[str]) -> None:
         """Waits until every transaction from the list is committed."""

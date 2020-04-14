@@ -8,7 +8,7 @@ from exonum_client import ExonumClient
 
 from .action_result import ActionResult
 from .configuration import Artifact, Configuration
-from .explorer import Explorer, NotCommittedError
+from .explorer import Explorer, NotCommittedError, ExecutionFailError, TxStatus
 from .instances import DefaultInstanceSpecLoader, InstanceSpecLoader
 from .launch_state import LaunchState
 from .runtimes import RuntimeSpecLoader, RustSpecLoader
@@ -123,19 +123,28 @@ class Launcher:
 
     def wait_for_deploy(self) -> None:
         """Waits for all the deployments to be completed."""
-        pending_deployments = self.launch_state.pending_deployments()
-        for tx_hashes in pending_deployments.values():
-            self._explorer.wait_for_txs(tx_hashes)
+        descriptions: Dict[Artifact, str] = dict()
+        check_for_deploy: List[Artifact] = list()
+        for artifact, tx_hashes in self.launch_state.pending_deployments().items():
+            try:
+                self._explorer.wait_for_txs(tx_hashes)
+                descriptions[artifact] = "deployed successfully"
+                check_for_deploy.append(artifact)  # Should be checked for deploy status since no exception occurs.
+            except ExecutionFailError as error:
+                descriptions[artifact] = str(error)
+            except NotCommittedError as error:
+                descriptions[artifact] = str(error)
+        for artifact in self.launch_state.pending_deployments():
+            result = self._explorer.wait_for_deploy(artifact) if artifact in check_for_deploy else ActionResult.Fail
+            self.launch_state.complete_deploy(artifact, result, descriptions[artifact])
 
-        for artifact in pending_deployments:
-            result = self._explorer.wait_for_deploy(artifact)
-            self.launch_state.complete_deploy(artifact, result)
-
-    def start_all(self) -> None:
+    def start_all(self, skipped_artifacts: List[Artifact] = None) -> None:
         """Starts all the service instances from the provided config."""
+        skipped_artifacts = skipped_artifacts or []
         config_loaders = [
             self._artifact_plugins.get(instance.artifact, DefaultInstanceSpecLoader())
             for instance in self.config.instances
+            if instance.artifact not in skipped_artifacts
         ]
 
         if not config_loaders:
@@ -189,14 +198,13 @@ class Launcher:
 
         try:
             self._explorer.wait_for_txs(tx_hashes)
-            tx_status, description = self._explorer.get_tx_status(tx_hashes[0])
-            if tx_status:
-                self.launch_state.unload_status = ActionResult.Success, description
-            else:
-                self.launch_state.unload_status = ActionResult.Fail, description
-
-        except NotCommittedError as error:
-            self.launch_state.unload_status = ActionResult.Fail, str(error)
+        except (ExecutionFailError, NotCommittedError):
+            pass
+        tx_status, description = self._explorer.get_tx_status(tx_hashes[0])
+        if tx_status == TxStatus.Success:
+            self.launch_state.unload_status = ActionResult.Success, description
+        else:
+            self.launch_state.unload_status = ActionResult.Fail, description
 
     def migrate_all(self) -> None:
         """Migrates all services from the provided config."""
