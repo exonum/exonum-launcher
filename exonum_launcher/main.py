@@ -58,7 +58,7 @@ def _deploy(launcher: Launcher, results: Dict[str, Any]) -> None:
 
     for artifact, (result, description) in launcher.launch_state.completed_deployments().items():
         deployed = launcher.explorer().is_deployed(artifact) and result == ActionResult.Success
-        status_description = "succeed" if deployed else description
+        status_description = "success" if deployed else description
         results["artifacts"][artifact] = status_description
         print(f"Artifact {artifact} -> deploy status: {status_description}")
 
@@ -76,7 +76,7 @@ def _migration(launcher: Launcher) -> None:
 
 def _start(launcher: Launcher, results: Dict[str, Any]) -> None:
     # Artifacts with erroneous deploy status
-    skipped_artifacts = [artifact for artifact, description in results["artifacts"].items() if description != "succeed"]
+    skipped_artifacts = [artifact for artifact, description in results["artifacts"].items() if description != "success"]
     launcher.start_all(skipped_artifacts)
     launcher.wait_for_start()
 

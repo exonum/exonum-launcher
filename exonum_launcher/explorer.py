@@ -22,9 +22,9 @@ class ExecutionFailError(Exception):
 class TxStatus(Enum):
     """Denotes transaction status."""
 
-    Success = (enum_auto(),)
-    Error = (enum_auto(),)
-    NotCommitted = (enum_auto(),)
+    Success = enum_auto()
+    Error = enum_auto()
+    NotCommitted = enum_auto()
     Unknown = enum_auto()
 
 

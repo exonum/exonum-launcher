@@ -128,7 +128,7 @@ class Launcher:
         for artifact, tx_hashes in self.launch_state.pending_deployments().items():
             try:
                 self._explorer.wait_for_txs(tx_hashes)
-                descriptions[artifact] = "deployed is ok"
+                descriptions[artifact] = "deployed successfully"
                 check_for_deploy.append(artifact)  # Should be checked for deploy status since no exception occurs.
             except ExecutionFailError as error:
                 descriptions[artifact] = str(error)
@@ -140,10 +140,11 @@ class Launcher:
 
     def start_all(self, skipped_artifacts: List[Artifact] = None) -> None:
         """Starts all the service instances from the provided config."""
+        skipped_artifacts = skipped_artifacts or []
         config_loaders = [
             self._artifact_plugins.get(instance.artifact, DefaultInstanceSpecLoader())
             for instance in self.config.instances
-            if not skipped_artifacts or instance.artifact not in skipped_artifacts
+            if instance.artifact not in skipped_artifacts
         ]
 
         if not config_loaders:
