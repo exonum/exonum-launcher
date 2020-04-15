@@ -3,6 +3,7 @@
 **Status:**
 [![Travis Build Status](https://travis-ci.org/exonum/exonum-launcher.svg?branch=master)](https://travis-ci.org/exonum/exonum-launcher)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=exonum_exonum-launcher&metric=alert_status)](https://sonarcloud.io/dashboard?id=exonum_exonum-launcher)
+
 Exonum Dynamic Service Launcher is a tool to manage the lifecycle of the Exonum services.
 
 This tool is capable of deploying artifacts, managing running services, and
