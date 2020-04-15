@@ -13,23 +13,30 @@ addons:
       - libsodium-dev
       - libprotobuf-dev
       - protobuf-compiler
+  sonarcloud:
+    organization: "exonum"
+    token:
+      secure: "SrtvSOVESYah7m7smG/MN3yK9ac4AHTGvDDihPWLC3j6j+3M2RdqBsWllZ/lz4j2j0Dv9IBLbkkuZaYmnZrTbL7KxRKmT/vq5ykgk7BFwR+eIMplpFtPTAsnRtarxl0faI/sr+TSeH/kDm58Vp9MqT7XWEBSxL09AC6Lq3U46TVCqaU4jt6AGEsRtvAhy4op4pQTMjo6T27QHdPLhrViX7GcJZPYe0AX7jmvc9XKlu9nv/6zY6y4Gv9tdFb4e/V4TeEYW109Tt9T9dY+qS1OpRMJ+lI8I0CnLFRamKt8Yj+11sTZJ/HU+X6oX4hJcnMZi6uOKuV64giQD4JC/I2VggkNFcmBKm5XVwbmp4LVbGm5e0Z36sMAbxsBnSpwS/kX/VW4hBkEtRBbVmvPMyBgQUdQS0xfE/ASphytCdZmwA2O8cgVFKIN3iHuLUjB+9BjM4u4w3isqjSQbfceXrmokclNFNbsztEKE58qhPv9mICopLRFiEo/hpTxLJTXOq1xynMd8DKt8bSw7DsqwFO3Sj0BVkbmF45e39IyOek9pzil6jmMweosK+WABl7IZCCyMwdBD7KLidz0udPk/EGl/qD2Er8ZugMLxGBwcag2p8sLSi1SbG7A8DF0fmxmDk/IHXoVOJy8FqIzyv0NBBIjBJVSwVn/955UiWX4eCYyiCw="
 
 jobs:
   include:
-  - name: lints
-    install:
-      - pip install black
-      - pip install pylint
-      - pip install mypy
-      - pip install --no-binary=protobuf protobuf pysodium requests websocket-client-py3 PyYAML
-      - git clone https://github.com/exonum/exonum-python-client.git
-      - pip install -e exonum-python-client
-    script:
-      - black --check -l 120 . --exclude=".*_pb2.py" --exclude="exonum-python-client"
-      - mypy --ignore-missing-imports --disallow-untyped-defs ./exonum_launcher
-      - pylint exonum_launcher --max-line-length=120 --disable=fixme,bad-continuation,too-few-public-methods,duplicate-code,too-many-instance-attributes
-  - name: tests
-    install:
-      - pip install -r requirements.txt
-    script:
-      - python -m unittest -v
+    - name: lints
+      install:
+        - pip install black
+        - pip install pylint
+        - pip install mypy
+        - pip install --no-binary=protobuf protobuf pysodium requests websocket-client-py3 PyYAML
+        - git clone https://github.com/exonum/exonum-python-client.git
+        - pip install -e exonum-python-client
+      script:
+        - black --check -l 120 . --exclude=".*_pb2.py" --exclude="exonum-python-client"
+        - mypy --ignore-missing-imports --disallow-untyped-defs ./exonum_launcher
+        - pylint exonum_launcher --max-line-length=120 --disable=fixme,bad-continuation,too-few-public-methods,duplicate-code,too-many-instance-attributes
+    - name: tests
+      install:
+        - pip install -r requirements.txt
+      script:
+        - python -m unittest -v
+    - name: sonar
+      script:
+        - sonar-scanner
