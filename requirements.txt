@@ -1,7 +1,7 @@
 certifi==2019.6.16
 chardet==3.0.4
 idna==2.8
-protobuf==3.17.2 --no-binary=protobuf
+protobuf==3.18.3 --no-binary=protobuf
 pysodium==0.7.9
 PyYAML==5.4
 requests==2.25.1
